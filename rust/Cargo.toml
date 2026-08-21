@@ -13,6 +13,7 @@ members = [
     "crates/pn-jobs",
     "crates/pn-render-graph",
     "crates/pn-rhi",
+    "crates/pn-rhi-reference",
     "crates/pn-vulkan-sys",
     "tools/vkgen",
 ]

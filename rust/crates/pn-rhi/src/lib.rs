@@ -20,6 +20,7 @@ pub mod barrier;
 pub mod derive;
 
 pub use barrier::{
-    Arrangement, Barrier, Access, Intent, PassId, QueueKind, ResourceId, ResourceKind, Stages,
+    Access, Arrangement, Barrier, Intent, PassId, QueueKind, ResourceId, ResourceKind, Scope,
+    Stages,
 };
 pub use derive::{DerivationError, Pass, Timeline, derive_barriers};

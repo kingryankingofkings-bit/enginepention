@@ -104,6 +104,23 @@ impl Graph {
         &self.resources[handle.0 as usize].name
     }
 
+    pub fn resource_kind(&self, handle: ResourceHandle) -> ResourceKind {
+        self.resources[handle.0 as usize].kind
+    }
+
+    /// The declared pass at `index`, as the RHI's own type.
+    ///
+    /// The bridge a backend needs: the graph owns the declarations, and a
+    /// backend should not have to know the graph's types to replay them.
+    pub fn pass_declaration(&self, index: PassIndex) -> pn_rhi::Pass {
+        let declaration = &self.passes[index.0 as usize];
+        pn_rhi::Pass::new(
+            declaration.name.clone(),
+            declaration.queue,
+            declaration.intents.clone(),
+        )
+    }
+
     pub fn pass_count(&self) -> usize {
         self.passes.len()
     }

@@ -133,13 +133,21 @@ most recently declared writer before it, and for a transient with no such writer
 that is a hazard rather than a reordering opportunity. The alternative would mean
 moving a pass declaration silently changed which frame's contents it sampled.
 
-Backends remain planned rather than present. Vulkan is now first
+Of the three planned backends, one exists in part. `pn-rhi-reference` is the
+non-hardware backend from
+[ADR-0005](docs/adr/ADR-0005-reference-backend.md): it rebuilds each resource's
+state from the derived barriers and checks the passes against it, so a wrong
+barrier set is reported rather than silently drawn. It works from the opposite
+direction to the derivation deliberately - re-running the same rules and
+comparing would reproduce any bug identically and agree with itself. ADR-0005
+also describes a simple rasterizer for golden-image tests; that half is not
+written.
+
+Vulkan is now the first hardware backend
 ([ADR-0009](docs/adr/ADR-0009-hybrid-rust-cpp.md)), with its type and command
 surface generated from the Khronos registry
 ([ADR-0010](docs/adr/ADR-0010-vulkan-bindings-from-the-registry.md)); D3D12
-follows; and an in-project reference backend
-([ADR-0005](docs/adr/ADR-0005-reference-backend.md)) is what would let the
-derivation be validated on a host without a GPU. None of the three is written.
+follows. Neither is written, and nothing here has made a Vulkan call.
 
 ## 9. Asset identity, database, and cooking
 

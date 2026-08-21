@@ -11,3 +11,9 @@ description = "Pass DAG, culling, lifetime analysis, and barrier derivation over
 
 [dependencies]
 pn-rhi = { path = "../pn-rhi" }
+
+[dev-dependencies]
+# Test-only. The graph does not depend on a backend; its tests validate the
+# graph's output against one, which is a different relationship and the only
+# one that makes the end-to-end check possible.
+pn-rhi-reference = { path = "../pn-rhi-reference" }

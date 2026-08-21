@@ -1,0 +1,13 @@
+# Requirement: PN-RND-003, PN-OPS-007
+# Decision:    ADR-0004, ADR-0005, ADR-0006
+
+[package]
+name = "pn-rhi-reference"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+publish.workspace = true
+description = "A non-hardware RHI backend that validates barriers independently of the code that derives them"
+
+[dependencies]
+pn-rhi = { path = "../pn-rhi" }

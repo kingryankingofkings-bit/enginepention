@@ -23,7 +23,7 @@ requirement rather than rounded up.
 ## Test totals, as counted from the built binaries
 
 162 registered C++ tests across 14 binaries, executing 12,483 assertions, plus
-106 Rust tests across 8 suites. All pass. Counted by running each binary rather
+127 Rust tests across 10 suites. All pass. Counted by running each binary rather
 than by reading the source, because a test that fails to register is invisible
 to a source count.
 
@@ -75,7 +75,9 @@ different things:
 | `pn-vulkan-sys` `bindings.rs` | 15 | Constant values and layouts against the Vulkan specification |
 | `pn-rhi` `barrier_derivation.rs` | 19 | Hand-computed barrier timelines, and the hazards that are rejected rather than papered over |
 | `pn-render-graph` `compilation.rs` | 20 | Ordering semantics, culling to a fixed point, lifetime spans, four classes of graph hazard, and the visualization |
-| **Total** | **106** | |
+| `pn-render-graph` `end_to_end.rs` | 5 | Whole frames compiled and then validated against the reference backend |
+| `pn-rhi-reference` `validation.rs` | 16 | Nine of them break a correct timeline in one specific way and require the backend to say so |
+| **Total** | **127** | |
 
 Concurrency soak beyond the matrix: 48 further runs of the two jobs suites under
 ThreadSanitizer (both compilers) and AddressSanitizer, zero failures and zero
@@ -118,7 +120,8 @@ warnings.
 | Implementation | `rust/crates/pn-rhi/src/{barrier,derive}.rs` |
 | Tests | `rust/crates/pn-rhi/tests/barrier_derivation.rs` (19 tests) |
 | What is demonstrated | Sync, access, and arrangement are three independent axes; barriers are derived from declared pass intents rather than written by passes; hand-computed timelines for a four-pass frame are asserted exactly; seven classes of hazard are rejected rather than turned into an over-conservative barrier; a chain of sixteen identical readers costs one barrier, not sixteen |
-| Why not `VERIFIED` | Two things are missing, and neither is a formality. The acceptance criterion names **the reference backend** (ADR-0005), which does not exist yet - these tests exercise the derivation directly. And ADR-0006 requires the **hardware debug layer with synchronization validation to be silent** before this is verified, which needs a GPU (`BLOCK-002`) and validation layers (`BLOCK-004`) |
+| Reference-backend evidence | `rust/crates/pn-rhi-reference` now exists and validates the derivation independently: it reconstructs each resource's state from the derived barriers alone, then checks the pass intents against it. Nine tests break a correct timeline in one specific way - a deleted barrier, a source scope that names the wrong writer, a transition from an arrangement the resource is not in, an unordered write-after-read - and require it to report exactly that. An empty timeline for a real frame is rejected everywhere, so a clean report is not the vacuous kind. Five whole frames are compiled by the render graph and replayed through it |
+| Why not `VERIFIED` | The catalog's criterion is met; [ADR-0006](docs/adr/ADR-0006-rhi-barrier-model.md)'s is not, and it requires the **hardware debug layer with synchronization validation to be silent**. The two check different things: the reference backend establishes that the derivation is self-consistent against an independent model of the same specification, and cannot establish that the model matches a driver - especially as the model was written by the same author as the thing it checks. Recorded as [CONF-004](docs/INSTRUCTION_CONFLICTS.md), resolved toward the stricter bar |
 | Defect found | The derivation initially treated read-after-read as always free. It is not: a barrier makes a write visible to the reader's stages, so a second reader in a stage nobody has synchronised for still races the writer even though the arrangement has not changed. Caught by a test written to separate the two cases |
 
 ### PN-RND-005 - Render graph

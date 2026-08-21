@@ -79,6 +79,7 @@ RUST_CRATE_MODULES: dict[str, str] = {
     "pn-jobs-sys": "jobs",
     "pn-jobs": "jobs",
     "pn-rhi": "rhi",
+    "pn-rhi-reference": "rhi",
     "pn-vulkan-sys": "rhi",
     "pn-render-graph": "rendergraph",
     # Build tooling. It runs on the host, ships in nothing, and sits outside the

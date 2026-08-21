@@ -18,11 +18,19 @@ name = "pn-render-graph"
 version = "0.0.1"
 dependencies = [
  "pn-rhi",
+ "pn-rhi-reference",
 ]
 
 [[package]]
 name = "pn-rhi"
 version = "0.0.1"
+
+[[package]]
+name = "pn-rhi-reference"
+version = "0.0.1"
+dependencies = [
+ "pn-rhi",
+]
 
 [[package]]
 name = "pn-vulkan-sys"
