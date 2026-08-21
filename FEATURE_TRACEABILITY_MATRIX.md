@@ -17,6 +17,18 @@ each of 10 build configurations. Counted by running each binary rather than by
 reading the source, because a test that fails to register is invisible to a
 source count.
 
+**Independently reproduced on a clean machine.** GitHub Actions run
+[32481092505](https://github.com/kingryankingofkings-bit/enginepention/actions/runs/32481092505)
+(push) and
+[32481200055](https://github.com/kingryankingofkings-bit/enginepention/actions/runs/32481200055)
+(pull request) each executed all 11 CI jobs - the clean-room and layering checks
+plus all 10 build configurations - from a fresh checkout on a runner that shares
+nothing with the development container. All 22 check runs concluded `success`.
+
+This matters more than the local run it duplicates: it is the first evidence in
+this repository that the build reproduces somewhere other than the machine it
+was written on.
+
 | Binary | Tests | Checks |
 |---|---|---|
 | `pn_test_testing_self` | 9 | 26 |
@@ -44,7 +56,8 @@ source count.
 | PN-WLD-002 | Stable physics/render coordinate conversion | `IMPLEMENTED_UNVERIFIED` | Round-trip conversion is bounded and asserted; the view matrix is proven to carry no translation. `engine/math/tests/matrix_test.cpp` | No physics engine exists yet, so the physics half of the contract is untested |
 | PN-OPS-003 | Warning discipline, static analysis, sanitizers | `IMPLEMENTED_UNVERIFIED` | Warnings-as-errors across a broad set under both compilers; ASan+UBSan and TSan configurations exist and pass. `docs/evidence/build-matrix.txt` | Static analysis (clang-tidy or equivalent) is not yet configured |
 | PN-PLT-018 | Module boundaries and dependency direction | `IMPLEMENTED_UNVERIFIED` | `build_scripts/check_layering.py` enforces the dependency graph and the single-graphics-API rule, and is **proven to fail** on deliberate violations. `docs/evidence/enforcement-checks.txt` | Only three modules exist, so the graph is barely exercised. The rule matters most at modules that do not yet exist |
-| PN-OPS-001 | Build configurations | `IMPLEMENTED_UNVERIFIED` | Debug and Release under both compilers, plus no-exceptions and two sanitizer configurations - 10 in total, all green | The editor, server, profile, and shipping configurations do not exist because the code they would configure does not exist |
+| PN-OPS-001 | Build configurations | `IMPLEMENTED_UNVERIFIED` | Debug and Release under both compilers, plus no-exceptions and two sanitizer configurations - 10 in total, all green locally and on clean CI runners | The editor, server, profile, and shipping configurations do not exist because the code they would configure does not exist |
+| PN-OPS-002 | Incremental and clean builds, toolchain lockfile, build cache policy | `IMPLEMENTED_UNVERIFIED` | A clean build from a fresh checkout succeeds on CI, which is one of this requirement's four parts | No toolchain lockfile, no declared build cache policy, and no generated-code tracking. Three of four parts are absent, so this is deliberately not `VERIFIED` |
 | PN-OPS-007 | Test categories | `IMPLEMENTED_UNVERIFIED` | Unit tests exist and run in CI | Property, integration, golden-image, scene, performance, soak, fuzz, network-chaos, recovery, and end-to-end categories do not exist yet |
 
 ## Documented conventions with enforcing tests

@@ -31,16 +31,17 @@ is on authorship, not on licensing.
 | 3 - Toolchain bootstrap and Tier A core | In progress |
 | 4-9 | Not started |
 
-Of 214 catalogued requirements: **3 are `VERIFIED`**, 6 are
+Of 214 catalogued requirements: **3 are `VERIFIED`**, 7 are
 `IMPLEMENTED_UNVERIFIED`, 18 are `BLOCKED` by this environment, and the
-remaining 187 are `NOT_STARTED`. Nothing is `DEFERRED_BY_SCOPE`. See
+remaining 186 are `NOT_STARTED`. Nothing is `DEFERRED_BY_SCOPE`. See
 [FEATURE_TRACEABILITY_MATRIX.md](FEATURE_TRACEABILITY_MATRIX.md).
 
 ## What builds and passes today
 
 62 tests across 7 binaries, 274 assertions, green in **10 build
 configurations** - GCC and Clang, Debug and Release, with exceptions disabled,
-and under ASan+UBSan and TSan.
+and under ASan+UBSan and TSan. Reproduced from a fresh checkout on clean CI
+runners, not only on the machine it was written on.
 
 | Module | Contents |
 |---|---|

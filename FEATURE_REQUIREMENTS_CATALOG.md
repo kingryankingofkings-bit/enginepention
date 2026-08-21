@@ -35,7 +35,7 @@ to that requirement — never an interface, a stub, or a passing compile.
 `DEFERRED_BY_SCOPE` is used only after the full inventory records why the item
 sits outside the agreed release tier, and never to hide skipped work.
 
-**Current status: 3 `VERIFIED`, 6 `IMPLEMENTED_UNVERIFIED`, 18 `BLOCKED`, 187
+**Current status: 3 `VERIFIED`, 7 `IMPLEMENTED_UNVERIFIED`, 18 `BLOCKED`, 186
 `NOT_STARTED`.** This catalog is the plan of record; the evidence behind each
 non-`NOT_STARTED` state is in
 [FEATURE_TRACEABILITY_MATRIX.md](FEATURE_TRACEABILITY_MATRIX.md). Where the two
@@ -320,7 +320,7 @@ environment (`BLOCK-001`..`BLOCK-004`). They are blocked, never deferred.
 | ID | Requirement | Tier | Depends on | Acceptance / test method | State |
 |---|---|---|---|---|---|
 | PN-OPS-001 | Editor, game, server, development, test, profile, shipping configurations | A | — | Each configuration builds and runs in CI | IMPLEMENTED_UNVERIFIED |
-| PN-OPS-002 | Incremental and clean builds, generated-code tracking, toolchain lockfile, build cache policy | A | PN-OPS-001 | Clean build from a fresh checkout succeeds | NOT_STARTED |
+| PN-OPS-002 | Incremental and clean builds, generated-code tracking, toolchain lockfile, build cache policy | A | PN-OPS-001 | Clean build from a fresh checkout succeeds | IMPLEMENTED_UNVERIFIED |
 | PN-OPS-003 | Warning discipline, static analysis, sanitizers | A | PN-OPS-001 | Warnings-as-errors; ASan/UBSan/TSan configurations green | IMPLEMENTED_UNVERIFIED |
 | PN-OPS-004 | Reproducibility checks | A | PN-PLT-025 | Two clean builds of one commit produce identical hashes | NOT_STARTED |
 | PN-OPS-005 | Cook, stage, package, patch, manifest, version, uninstall for the first target | B | PN-AST-003 | Packaged build runs without the source asset tree present | BLOCKED (`BLOCK-001`) |
