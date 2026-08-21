@@ -1,0 +1,36 @@
+Enforcement check validation
+Captured: 2026-08-21T12:13:00Z
+
+A check that has never failed is untested. Each check below is run against
+a deliberately violating file, which is deleted immediately afterwards.
+
+=== 1. Authorship check, against a file with no header ===
+Authorship header check FAILED
+  engine/core/include/pn/core/_violation.hpp: missing 'Requirement:' line in the header
+
+Every source file must name the requirement it implements and the ADR it follows, in the first 12 lines. For example:
+  // Pention Engine - core/thing.hpp
+  // Requirement: PN-PLT-001 - what this file is for
+  // Decision:    ADR-0004
+exit=1
+
+=== 2. Layering check, against an upward dependency (math -> core) ===
+Module layering check FAILED
+  engine/math/include/pn/math/_violation.hpp: module 'math' includes from 'core', which is not below it in the dependency graph. Permitted: nothing. (ADR-0004 rule 2)
+
+A cycle or an upward edge means a module boundary is wrong. Fix the boundary rather than widening the graph to accommodate the include.
+exit=1
+
+=== 3. Layering check, against a graphics API header outside the RHI ===
+Module layering check FAILED
+  engine/core/include/pn/core/_violation.hpp: module 'core' includes the graphics API header 'd3d12.h'. Only ['rhi'] may. (ADR-0004 rule 1)
+  engine/core/include/pn/core/_violation.hpp: module 'core' includes the graphics API header 'vulkan/vulkan.h'. Only ['rhi'] may. (ADR-0004 rule 1)
+
+A cycle or an upward edge means a module boundary is wrong. Fix the boundary rather than widening the graph to accommodate the include.
+exit=1
+
+=== 4. Both checks pass again after the violations are removed ===
+Authorship header check passed
+exit=0
+Module layering check passed
+exit=0

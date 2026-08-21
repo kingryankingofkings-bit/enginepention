@@ -35,10 +35,12 @@ to that requirement — never an interface, a stub, or a passing compile.
 `DEFERRED_BY_SCOPE` is used only after the full inventory records why the item
 sits outside the agreed release tier, and never to hide skipped work.
 
-**Current status: every requirement below is `NOT_STARTED` or `BLOCKED`.** No
-implementation exists yet. This catalog is the plan of record, not a progress
-report; progress is tracked in
-[FEATURE_TRACEABILITY_MATRIX.md](FEATURE_TRACEABILITY_MATRIX.md).
+**Current status: 3 `VERIFIED`, 6 `IMPLEMENTED_UNVERIFIED`, 18 `BLOCKED`, 187
+`NOT_STARTED`.** This catalog is the plan of record; the evidence behind each
+non-`NOT_STARTED` state is in
+[FEATURE_TRACEABILITY_MATRIX.md](FEATURE_TRACEABILITY_MATRIX.md). Where the two
+disagree, the traceability matrix is authoritative, because it cites the
+evidence.
 
 ## Tier meanings
 
@@ -62,14 +64,14 @@ Tiers are cumulative (§6).
 | PN-PLT-008 | Out-of-memory handling with defined recovery boundaries | A | PN-PLT-006 | Injected allocation failure; engine reports rather than faults | NOT_STARTED |
 | PN-PLT-009 | Cache-aware containers authored in-project | A | PN-PLT-006 | Unit + property tests; bounds-checked in debug | NOT_STARTED |
 | PN-PLT-010 | String, interned name, and handle systems | A | PN-PLT-009 | Interning collision and rehash tests; handle staleness detection | NOT_STARTED |
-| PN-PLT-011 | Generational handles that detect stale access | A | PN-PLT-010 | Freed-then-reused slot yields a detectable stale handle, not an alias | NOT_STARTED |
+| PN-PLT-011 | Generational handles that detect stale access | A | PN-PLT-010 | Freed-then-reused slot yields a detectable stale handle, not an alias | VERIFIED |
 | PN-PLT-012 | Thread abstraction, affinity, naming | A | — | Thread lifecycle test; names visible in diagnostics | NOT_STARTED |
 | PN-PLT-013 | Work-stealing job graph with priorities and dependencies | A | PN-PLT-012 | Scales with core count; randomized scheduling stress finds no deadlock | NOT_STARTED |
 | PN-PLT-014 | Synchronization primitives, cancellation, deadlock diagnostics | A | PN-PLT-013 | TSan clean; cancellation propagates without leaking jobs | NOT_STARTED |
 | PN-PLT-015 | Asynchronous I/O with cancellation and backpressure | A | PN-PLT-013 | Concurrent read stress; cancel mid-flight leaves no dangling buffer | NOT_STARTED |
 | PN-PLT-016 | Logging, structured events, assertions with categories and levels | A | — | Log capture in tests; assertion fires with source location | NOT_STARTED |
 | PN-PLT-017 | Crash capture, minidump integration, error reporting, recovery boundary | A | PN-PLT-016 | Induced fault produces a usable dump on the target platform | BLOCKED (`BLOCK-001` for the Windows dump path) |
-| PN-PLT-018 | Module boundaries, stable internal APIs, versioning, capability discovery | A | — | CI dependency-direction check fails on a violating include | NOT_STARTED |
+| PN-PLT-018 | Module boundaries, stable internal APIs, versioning, capability discovery | A | — | CI dependency-direction check fails on a violating include | IMPLEMENTED_UNVERIFIED |
 | PN-PLT-019 | Configuration, console variables, command execution | A | PN-PLT-010 | CVar set/get/persist round-trip; command parse errors are actionable | NOT_STARTED |
 | PN-PLT-020 | Deterministic serialization with schema migration | A | PN-PLT-009 | Golden-data test; old-version payload migrates and round-trips | NOT_STARTED |
 | PN-PLT-021 | Object identity and reference repair across load | A | PN-PLT-020 | Cross-referencing objects survive save/load and rename | NOT_STARTED |
@@ -77,8 +79,8 @@ Tiers are cumulative (§6).
 | PN-PLT-023 | Save-game foundations built on the serialization core | B | PN-PLT-021 | Save/reload across a world mutation preserves state | NOT_STARTED |
 | PN-PLT-024 | In-project reflection and metadata generation | A | PN-PLT-010 | Reflected type round-trips through serializer and inspector without hand-written glue | NOT_STARTED |
 | PN-PLT-025 | Reproducible builds, build manifests, version stamping | A | — | Two clean builds of one commit produce identical artefact hashes | NOT_STARTED |
-| PN-PLT-026 | In-project unit test framework (no third-party framework permitted) | A | — | Framework runs its own self-tests; failure reporting verified by deliberate failures | NOT_STARTED |
-| PN-PLT-027 | `Expected`-based fallible-return convention, exception-independent | A | — | Compiles and passes under GCC and Clang, and under `-fno-exceptions` | NOT_STARTED |
+| PN-PLT-026 | In-project unit test framework (no third-party framework permitted) | A | — | Framework runs its own self-tests; failure reporting verified by deliberate failures | VERIFIED |
+| PN-PLT-027 | `Expected`-based fallible-return convention, exception-independent | A | — | Compiles and passes under GCC and Clang, and under `-fno-exceptions` | VERIFIED |
 
 ## 7.2 Object, entity, scene, and gameplay architecture
 
@@ -153,8 +155,8 @@ environment (`BLOCK-001`..`BLOCK-004`). They are blocked, never deferred.
 
 | ID | Requirement | Tier | Depends on | Acceptance / test method | State |
 |---|---|---|---|---|---|
-| PN-WLD-001 | Double-precision or partition-relative world coordinates | A | PN-PLT-009 | No vertex jitter or shadow crawl at 500 km from origin | NOT_STARTED |
-| PN-WLD-002 | Stable physics/render coordinate conversion | A | PN-WLD-001 | Round-trip conversion error bounded and asserted | NOT_STARTED |
+| PN-WLD-001 | Double-precision or partition-relative world coordinates | A | PN-PLT-009 | No vertex jitter or shadow crawl at 500 km from origin | IMPLEMENTED_UNVERIFIED |
+| PN-WLD-002 | Stable physics/render coordinate conversion | A | PN-WLD-001 | Round-trip conversion error bounded and asserted | IMPLEMENTED_UNVERIFIED |
 | PN-WLD-003 | Multiplayer-safe spatial addressing | C | PN-WLD-001 | Two clients agree on cell identity for the same world point | NOT_STARTED |
 | PN-WLD-004 | Editable world partition grid or hierarchical spatial index | B | PN-WLD-001 | Query correctness under randomized insert/remove | NOT_STARTED |
 | PN-WLD-005 | Async cell streaming with prefetch, prioritization, cancellation | B | PN-WLD-004, PN-PLT-015 | 100 km traversal with no frame spike above budget | NOT_STARTED |
@@ -317,13 +319,13 @@ environment (`BLOCK-001`..`BLOCK-004`). They are blocked, never deferred.
 
 | ID | Requirement | Tier | Depends on | Acceptance / test method | State |
 |---|---|---|---|---|---|
-| PN-OPS-001 | Editor, game, server, development, test, profile, shipping configurations | A | — | Each configuration builds and runs in CI | NOT_STARTED |
+| PN-OPS-001 | Editor, game, server, development, test, profile, shipping configurations | A | — | Each configuration builds and runs in CI | IMPLEMENTED_UNVERIFIED |
 | PN-OPS-002 | Incremental and clean builds, generated-code tracking, toolchain lockfile, build cache policy | A | PN-OPS-001 | Clean build from a fresh checkout succeeds | NOT_STARTED |
-| PN-OPS-003 | Warning discipline, static analysis, sanitizers | A | PN-OPS-001 | Warnings-as-errors; ASan/UBSan/TSan configurations green | NOT_STARTED |
+| PN-OPS-003 | Warning discipline, static analysis, sanitizers | A | PN-OPS-001 | Warnings-as-errors; ASan/UBSan/TSan configurations green | IMPLEMENTED_UNVERIFIED |
 | PN-OPS-004 | Reproducibility checks | A | PN-PLT-025 | Two clean builds of one commit produce identical hashes | NOT_STARTED |
 | PN-OPS-005 | Cook, stage, package, patch, manifest, version, uninstall for the first target | B | PN-AST-003 | Packaged build runs without the source asset tree present | BLOCKED (`BLOCK-001`) |
 | PN-OPS-006 | CPU/GPU/memory/IO/network budgets, capture format, baselines, regression thresholds, hardware metadata | B | PN-OPS-003 | Every capture carries full hardware and settings context | NOT_STARTED |
-| PN-OPS-007 | Unit, property, integration, golden-image, scene, performance, soak, fuzz, network-chaos, recovery, end-to-end tests | A | PN-PLT-026 | Each category present and running in CI | NOT_STARTED |
+| PN-OPS-007 | Unit, property, integration, golden-image, scene, performance, soak, fuzz, network-chaos, recovery, end-to-end tests | A | PN-PLT-026 | Each category present and running in CI | IMPLEMENTED_UNVERIFIED |
 | PN-OPS-008 | Secure parsing, bounds checks, integer-overflow handling, untrusted-asset policy, script sandbox, network validation, path-traversal prevention, decompression limits, secrets policy | A | PN-AST-004 | Each control has a negative test that fails without it | NOT_STARTED |
 | PN-OPS-009 | Dependency and provenance audit, threat model, secure defaults | A | — | Audit runs and its result recorded, including failures | NOT_STARTED |
 | PN-OPS-010 | Crash recovery, backup/migration tests, data-loss testing | B | PN-EDT-009 | Induced crash mid-save never destroys the prior good file | NOT_STARTED |

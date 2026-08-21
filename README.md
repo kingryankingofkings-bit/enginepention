@@ -3,48 +3,86 @@
 A clean-room, custom-built, next-generation 3D sandbox / free-roam game engine
 and integrated editor, written in C++23.
 
-**Status: Phase 0 complete — environment and repository truth established.**
-No engine capability exists yet. This README will not describe a feature as
-existing until that feature is `VERIFIED` with executed evidence.
+**Status: Phase 3 begun. A Tier A foundation builds and passes tests. There is
+no renderer, no editor, and no runtime.**
+
+This README will not describe a capability as existing until that capability is
+`VERIFIED` with executed evidence.
 
 ## What this project is
 
 An independently engineered engine. It studies the documented capabilities and
-published techniques of leading engines, and implements comparable capability
+published techniques of leading engines and implements comparable capability
 through original designs. It contains no engine forks, no middleware, and no
-copied implementation code — see [DEPENDENCY_BOUNDARY.md](DEPENDENCY_BOUNDARY.md)
+copied implementation code - see [DEPENDENCY_BOUNDARY.md](DEPENDENCY_BOUNDARY.md)
 and [PROVENANCE_LEDGER.md](PROVENANCE_LEDGER.md) for the enforced boundary.
+
+There are no third-party libraries of any kind, including for testing. A
+permissive licence does not satisfy the custom-build requirement; the constraint
+is on authorship, not on licensing.
 
 ## Current state
 
 | Phase | State |
 |---|---|
-| 0 — Environment and repository truth | Complete |
-| 1 — Research and normalized requirements | Not started |
-| 2 — Product specification and architecture | Not started |
-| 3 — Toolchain bootstrap and Tier A core | Not started |
-| 4–9 | Not started |
+| 0 - Environment and repository truth | Complete |
+| 1 - Research and normalized requirements | Complete, with a recorded shortfall ([GAP-001](RESEARCH_GAPS.md)) |
+| 2 - Product specification and architecture | Complete |
+| 3 - Toolchain bootstrap and Tier A core | In progress |
+| 4-9 | Not started |
 
-There is no buildable engine, no renderer, no editor, and no runtime yet.
-Anything stating otherwise would violate §4 of the governing execution prompt.
+Of 214 catalogued requirements: **3 are `VERIFIED`**, 6 are
+`IMPLEMENTED_UNVERIFIED`, 18 are `BLOCKED` by this environment, and the
+remaining 187 are `NOT_STARTED`. Nothing is `DEFERRED_BY_SCOPE`. See
+[FEATURE_TRACEABILITY_MATRIX.md](FEATURE_TRACEABILITY_MATRIX.md).
+
+## What builds and passes today
+
+62 tests across 7 binaries, 274 assertions, green in **10 build
+configurations** - GCC and Clang, Debug and Release, with exceptions disabled,
+and under ASan+UBSan and TSan.
+
+| Module | Contents |
+|---|---|
+| `engine/testing` | The in-project test framework, which verifies its own failure reporting |
+| `engine/math` | `f64` world space and camera-relative `f32` render space as distinct types, column-major matrices, reversed-Z infinite projection |
+| `engine/core` | `pn::Expected` fallible-return type, allocation-free `Error`, generational handle pool |
+
+```sh
+cmake -S . -B build -G Ninja && cmake --build build && ctest --test-dir build
+```
+
+Full instructions: [BUILD.md](BUILD.md).
+
+## Known blockers
+
+The development environment is a headless Linux container with **no GPU**, no
+Windows SDK, no Direct3D 12 headers, and no shader compilers, and its network
+egress policy reaches only GitHub. The graphics backend cannot be compiled or
+executed here, and vendor documentation could not be read for the competitive
+research.
+
+Tracked as `BLOCK-001` through `BLOCK-006` in
+[docs/ENVIRONMENT_BASELINE.md](docs/ENVIRONMENT_BASELINE.md), each naming the
+smallest external action that would clear it. Work that does not depend on them
+proceeds.
 
 ## Governing documents
 
 | Document | Purpose |
 |---|---|
-| [docs/ENVIRONMENT_BASELINE.md](docs/ENVIRONMENT_BASELINE.md) | Measured facts about the build environment, and the external blockers |
-| [docs/INSTRUCTION_CONFLICTS.md](docs/INSTRUCTION_CONFLICTS.md) | Recorded conflicts between instruction sources and how each was resolved |
-| [PROVENANCE_LEDGER.md](PROVENANCE_LEDGER.md) | Clean-room controls; every external source consulted |
-| [DEPENDENCY_BOUNDARY.md](DEPENDENCY_BOUNDARY.md) | Every non-engine artefact, and why it is infrastructure rather than a subsystem |
-| [docs/adr/](docs/adr/) | Architecture decision records |
+| [ARCHITECTURE.md](ARCHITECTURE.md) | Process model, module boundaries, frame pipeline, and what is deliberately still open |
+| [docs/conventions.md](docs/conventions.md) | Binding conventions, each naming the test that enforces it |
+| [FEATURE_REQUIREMENTS_CATALOG.md](FEATURE_REQUIREMENTS_CATALOG.md) | 214 requirements with tier, dependencies, test method, and state |
+| [FEATURE_TRACEABILITY_MATRIX.md](FEATURE_TRACEABILITY_MATRIX.md) | What is actually verified, and what is only implemented |
+| [docs/INSTRUCTION_CONFLICTS.md](docs/INSTRUCTION_CONFLICTS.md) | Conflicts between instruction sources, and how each was resolved |
+| [RESEARCH_GAPS.md](RESEARCH_GAPS.md) | What could not be established, and why |
+| [TECHNIQUE_RISK_REGISTER.md](TECHNIQUE_RISK_REGISTER.md) | Legal, provenance, feasibility, hardware, and maintenance risk |
+| [docs/adr/](docs/adr/) | Six architecture decision records |
 
-## Known blockers
+## A note on performance claims
 
-The current development environment is a headless Linux container with **no
-GPU**, no Windows SDK, no Direct3D 12 headers, and no shader compilers. The
-graphics backend therefore cannot be compiled or executed here. These are
-tracked as `BLOCK-001` through `BLOCK-005` in
-[docs/ENVIRONMENT_BASELINE.md](docs/ENVIRONMENT_BASELINE.md) §3, each with the
-smallest exact external action required to clear it.
-
-Work that does not depend on them proceeds.
+There are none, and there will be none until there is hardware to measure on.
+No figure in this repository is a measurement of rendering performance; where
+budgets appear they are labelled as targets. A target is never rewritten as an
+achievement.
