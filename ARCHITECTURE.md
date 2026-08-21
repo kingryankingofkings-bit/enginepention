@@ -139,9 +139,14 @@ non-hardware backend from
 state from the derived barriers and checks the passes against it, so a wrong
 barrier set is reported rather than silently drawn. It works from the opposite
 direction to the derivation deliberately - re-running the same rules and
-comparing would reproduce any bug identically and agree with itself. ADR-0005
-also describes a simple rasterizer for golden-image tests; that half is not
-written.
+comparing would reproduce any bug identically and agree with itself.
+
+Its second half is now written too: correctness-oriented rasterization, enough
+for golden-image tests of geometry, transforms, depth ordering, and shading
+math. Golden images are text rather than image files, so a failure prints the
+picture beside the expected one. It is a correctness oracle, and makes no
+performance claim of any kind - there is no tiling, no SIMD, and no threading in
+it.
 
 Vulkan is now the first hardware backend
 ([ADR-0009](docs/adr/ADR-0009-hybrid-rust-cpp.md)), with its type and command

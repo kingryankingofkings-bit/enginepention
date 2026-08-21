@@ -26,8 +26,8 @@ framework, math, core, platform, and the job scheduler; plus, on the Rust side,
 the generated Vulkan type and command surface
 ([ADR-0010](docs/adr/ADR-0010-vulkan-bindings-from-the-registry.md)), barrier
 derivation (`pn-rhi`), the render graph (`pn-render-graph`), and a reference
-backend that validates the derived barriers without hardware
-(`pn-rhi-reference`). No instance has been created and no frame has been drawn,
+backend that both validates the derived barriers and rasterizes for
+golden-image tests, without hardware (`pn-rhi-reference`). No instance has been created and no frame has been drawn,
 so **M0 has not been reached** - and M2's barrier work landing before M0 is not
 progress out of order, it is the part of M2 that a machine with no GPU can
 actually verify.
@@ -48,7 +48,7 @@ actually verify.
 | M9 | Sky, atmosphere, volumetrics | Full day/night cycle with aerial perspective | 5 | NOT_STARTED |
 | M10 | Global illumination and reflections | Indirect light responds to time of day | 5 | NOT_STARTED |
 | M11 | Terrain, sandbox edits, vegetation, physics | Runtime terrain edits collide correctly | 4-6 | NOT_STARTED |
-| M12 | Editor, cooking, profiling, CI | Cooked build ships; golden-image tests green | 3, 8, 9 | CI exists from the first commit; the rest NOT_STARTED. Golden-image tests need the reference backend's rasterizer, which is the half of [ADR-0005](docs/adr/ADR-0005-reference-backend.md) that is not written |
+| M12 | Editor, cooking, profiling, CI | Cooked build ships; golden-image tests green | 3, 8, 9 | CI exists from the first commit, and golden-image tests now run in it against the reference rasterizer. Editor, cooking and profiling NOT_STARTED |
 
 Two milestones span phases because the prompt's phases are broader than the
 skill's: M8's camera-relative arithmetic is Tier A groundwork that belongs in

@@ -38,7 +38,7 @@ remaining 174 are `NOT_STARTED`. Nothing is `DEFERRED_BY_SCOPE`. See
 
 ## What builds and passes today
 
-183 C++ tests across 15 binaries and 127 Rust tests across 10 suites, green in
+183 C++ tests across 15 binaries and 145 Rust tests across 11 suites, green in
 **10 build configurations** - GCC and Clang, Debug and Release, with exceptions
 disabled, and under ASan+UBSan and TSan. Reproduced from a fresh checkout on
 clean CI runners, not only on the machine it was written on.
@@ -55,7 +55,7 @@ clean CI runners, not only on the machine it was written on.
 | `rust/crates/pn-vulkan-sys` | The generated Vulkan surface: 563 types and 229 commands for core 1.0-1.3 plus `VK_KHR_surface` and `VK_KHR_swapchain`. Nothing here is hand-written |
 | `rust/crates/pn-rhi` | Sync, access, and arrangement as three independent axes, and the derivation that turns declared pass intents into a barrier timeline. Talks to no graphics API, which is why it is testable without a GPU |
 | `rust/crates/pn-render-graph` | Pass DAG, culling, resource lifetimes, hazard validation, and a DOT visualization of passes and resources |
-| `rust/crates/pn-rhi-reference` | A backend with no hardware behind it. It rebuilds resource state from the derived barriers and checks the passes against it, so a wrong barrier set is reported rather than drawn |
+| `rust/crates/pn-rhi-reference` | A backend with no hardware behind it. It rebuilds resource state from the derived barriers and checks the passes against it, so a wrong barrier set is reported rather than drawn - and rasterizes triangles for golden-image tests of geometry, depth ordering, and shading math |
 
 ```sh
 cmake -S . -B build -G Ninja && cmake --build build && ctest --test-dir build

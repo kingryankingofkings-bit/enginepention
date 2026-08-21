@@ -23,7 +23,7 @@ requirement rather than rounded up.
 ## Test totals, as counted from the built binaries
 
 183 registered C++ tests across 15 binaries, executing 897,210 assertions, plus
-127 Rust tests across 10 suites. All pass.
+145 Rust tests across 11 suites. All pass.
 
 The assertion count jumps because the generator's statistical tests assert
 per draw: 884,727 of those checks are one test binary establishing uniformity,
@@ -83,7 +83,8 @@ different things:
 | `pn-render-graph` `compilation.rs` | 20 | Ordering semantics, culling to a fixed point, lifetime spans, four classes of graph hazard, and the visualization |
 | `pn-render-graph` `end_to_end.rs` | 5 | Whole frames compiled and then validated against the reference backend |
 | `pn-rhi-reference` `validation.rs` | 16 | Nine of them break a correct timeline in one specific way and require the backend to say so |
-| **Total** | **127** | |
+| `pn-rhi-reference` `rasterization.rs` | 18 | Golden images as text: fill rule, perspective correction, reversed-Z ordering, culling by winding, near-plane clipping, sRGB at output |
+| **Total** | **145** | |
 
 Concurrency soak beyond the matrix: 48 further runs of the two jobs suites under
 ThreadSanitizer (both compilers) and AddressSanitizer, zero failures and zero
@@ -126,7 +127,7 @@ warnings.
 | Implementation | `rust/crates/pn-rhi/src/{barrier,derive}.rs` |
 | Tests | `rust/crates/pn-rhi/tests/barrier_derivation.rs` (19 tests) |
 | What is demonstrated | Sync, access, and arrangement are three independent axes; barriers are derived from declared pass intents rather than written by passes; hand-computed timelines for a four-pass frame are asserted exactly; seven classes of hazard are rejected rather than turned into an over-conservative barrier; a chain of sixteen identical readers costs one barrier, not sixteen |
-| Reference-backend evidence | `rust/crates/pn-rhi-reference` now exists and validates the derivation independently: it reconstructs each resource's state from the derived barriers alone, then checks the pass intents against it. Nine tests break a correct timeline in one specific way - a deleted barrier, a source scope that names the wrong writer, a transition from an arrangement the resource is not in, an unordered write-after-read - and require it to report exactly that. An empty timeline for a real frame is rejected everywhere, so a clean report is not the vacuous kind. Five whole frames are compiled by the render graph and replayed through it |
+| Reference-backend evidence | `rust/crates/pn-rhi-reference` exists and validates the derivation independently: it reconstructs each resource's state from the derived barriers alone, then checks the pass intents against it. Nine tests break a correct timeline in one specific way - a deleted barrier, a source scope that names the wrong writer, a transition from an arrangement the resource is not in, an unordered write-after-read - and require it to report exactly that. An empty timeline for a real frame is rejected everywhere, so a clean report is not the vacuous kind. Five whole frames are compiled by the render graph and replayed through it |
 | Why not `VERIFIED` | The catalog's criterion is met; [ADR-0006](docs/adr/ADR-0006-rhi-barrier-model.md)'s is not, and it requires the **hardware debug layer with synchronization validation to be silent**. The two check different things: the reference backend establishes that the derivation is self-consistent against an independent model of the same specification, and cannot establish that the model matches a driver - especially as the model was written by the same author as the thing it checks. Recorded as [CONF-004](docs/INSTRUCTION_CONFLICTS.md), resolved toward the stricter bar |
 | Defect found | The derivation initially treated read-after-read as always free. It is not: a barrier makes a write visible to the reader's stages, so a second reader in a stage nobody has synchronised for still races the writer even though the arrangement has not changed. Caught by a test written to separate the two cases |
 
@@ -151,6 +152,22 @@ warnings.
 | What is demonstrated | Determinism across **compilers**: a recorded eight-value sequence is asserted literally, so a compiler that disagrees fails rather than passing quietly. Confirmed identical under g++ and clang++ at `-O0` and `-O2`, and across all ten CI configurations. Streams of one seed are independent and are not shifted copies of each other at any of sixteen offsets. Seeking ten million draws ahead agrees with iterating. Avalanche measured over 32,768 single-bit perturbations: mean 31-33 output bits flipped, no perturbation below 12 or above 52. The mixer is injective over a million consecutive inputs. Every output bit is set 49-51% of the time over 200,000 draws. `uniform` uses rejection sampling and shows no low-end bias over 1.2 million draws where `%` would |
 | Why not `VERIFIED` | The criterion says "across platforms **and** compilers". The compiler half is evidenced; the platform half has one platform. Linux x86-64 is all this environment has (`BLOCK-001`), and an argument that the code contains no implementation-defined behaviour is an argument, not a measurement. The recorded sequence is the artifact that closes this: the same test on a Windows or ARM host either matches it or does not |
 | Not claimed | Cryptographic strength, or a pass through any published statistical battery. None has been run here, and repeating a quality claim from another generator's literature would be describing evidence this project does not have. The header says so at the point of use |
+
+### ADR-0005 - Reference backend (not a requirement; recorded because things depend on it)
+
+Both halves described by [ADR-0005](docs/adr/ADR-0005-reference-backend.md) now
+exist: the validating command recorder, and correctness-oriented rasterization
+sufficient for golden-image tests.
+
+| Field | Value |
+|---|---|
+| Implementation | `rust/crates/pn-rhi-reference/src/{device,trace,raster}.rs` |
+| Tests | 34 - 16 in `validation.rs`, 18 in `rasterization.rs` |
+| Golden images | Text, not image files. A failing comparison prints the picture beside the expected one in the test output, so the difference is visible without opening a viewer or trusting an encoder. A golden image nobody can read is a golden image nobody will update correctly |
+| Conventions enforced | Reversed-Z with depth clearing to 0.0 and greater-or-equal comparison; the Y flip between NDC and framebuffer rows; counter-clockwise-front under right-handed coordinates; linear colour throughout with sRGB applied exactly once at output (linear 0.5 encodes to 188, not 128) |
+| Defect found | Geometry lying exactly on the near plane was clipped away. The near test used a positive epsilon, so `z == w` - which *is* the near plane - fell outside it. This presents as surfaces vanishing the moment the camera reaches them, and it was invisible until a test drew a quad at exactly the near plane |
+| Not claimed | Any performance property. There is no tiling, no SIMD, no threading, and no measurement. It is a correctness oracle, and the header says so |
+
 
 ## Documented conventions with enforcing tests
 

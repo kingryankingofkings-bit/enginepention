@@ -28,7 +28,11 @@
 // golden-image tests; that is a separate piece of work and does not exist yet.
 
 pub mod device;
+pub mod raster;
 pub mod trace;
 
 pub use device::{Hazard, ReferenceDevice, Report};
+pub use raster::{
+    CullMode, DepthTest, Framebuffer, RasterState, Vertex, MAX_ATTRIBUTES, draw_triangles,
+};
 pub use trace::{Event, Trace};

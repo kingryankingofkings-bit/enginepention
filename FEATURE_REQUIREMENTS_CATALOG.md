@@ -330,7 +330,7 @@ requirement is genuinely Windows-specific.
 | PN-OPS-004 | Reproducibility checks | A | PN-PLT-025 | Two clean builds of one commit produce identical hashes | NOT_STARTED |
 | PN-OPS-005 | Cook, stage, package, patch, manifest, version, uninstall for the first target | B | PN-AST-003 | Packaged build runs without the source asset tree present | BLOCKED (`BLOCK-001`) |
 | PN-OPS-006 | CPU/GPU/memory/IO/network budgets, capture format, baselines, regression thresholds, hardware metadata | B | PN-OPS-003 | Every capture carries full hardware and settings context | NOT_STARTED |
-| PN-OPS-007 | Unit, property, integration, golden-image, scene, performance, soak, fuzz, network-chaos, recovery, end-to-end tests | A | PN-PLT-026 | Each category present and running in CI | IMPLEMENTED_UNVERIFIED |
+| PN-OPS-007 | Unit, property, integration, golden-image, scene, performance, soak, fuzz, network-chaos, recovery, end-to-end tests | A | PN-PLT-026 | Each category present and running in CI | IMPLEMENTED_UNVERIFIED - unit, integration and golden-image present; performance, soak, fuzz, network-chaos and recovery absent |
 | PN-OPS-008 | Secure parsing, bounds checks, integer-overflow handling, untrusted-asset policy, script sandbox, network validation, path-traversal prevention, decompression limits, secrets policy | A | PN-AST-004 | Each control has a negative test that fails without it | NOT_STARTED |
 | PN-OPS-009 | Dependency and provenance audit, threat model, secure defaults | A | — | Audit runs and its result recorded, including failures | NOT_STARTED |
 | PN-OPS-010 | Crash recovery, backup/migration tests, data-loss testing | B | PN-EDT-009 | Induced crash mid-save never destroys the prior good file | NOT_STARTED |
