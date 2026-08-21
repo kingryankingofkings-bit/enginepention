@@ -1,0 +1,13 @@
+# Requirement: PN-RND-005
+# Decision:    ADR-0004, ADR-0005, ADR-0006, ADR-0009
+
+[package]
+name = "pn-render-graph"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+publish.workspace = true
+description = "Pass DAG, culling, lifetime analysis, and barrier derivation over declared resource intents"
+
+[dependencies]
+pn-rhi = { path = "../pn-rhi" }

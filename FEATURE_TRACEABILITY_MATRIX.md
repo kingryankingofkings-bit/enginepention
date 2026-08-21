@@ -7,8 +7,8 @@ tests, and the evidence supporting its current state.
 acceptance evidence both exist.** An interface, a stub, a passing compile, or a
 design document is not evidence.
 
-Current totals: **5 `VERIFIED`**, 15 `IMPLEMENTED_UNVERIFIED`, 18 `BLOCKED`,
-176 `NOT_STARTED`, of 214. Nothing is `DEFERRED_BY_SCOPE`.
+Current totals: **5 `VERIFIED`**, 16 `IMPLEMENTED_UNVERIFIED`, 18 `BLOCKED`,
+175 `NOT_STARTED`, of 214. Nothing is `DEFERRED_BY_SCOPE`.
 
 No requirement changed state in the Vulkan binding increment. The bindings are
 infrastructure under PN-RND-001, which stays `BLOCKED`: nothing here has
@@ -23,7 +23,7 @@ requirement rather than rounded up.
 ## Test totals, as counted from the built binaries
 
 162 registered C++ tests across 14 binaries, executing 12,483 assertions, plus
-86 Rust tests across 7 suites. All pass. Counted by running each binary rather
+106 Rust tests across 8 suites. All pass. Counted by running each binary rather
 than by reading the source, because a test that fails to register is invisible
 to a source count.
 
@@ -74,7 +74,8 @@ different things:
 | `vkgen` `sha256.rs` | 6 | FIPS PUB 180-4 published vectors |
 | `pn-vulkan-sys` `bindings.rs` | 15 | Constant values and layouts against the Vulkan specification |
 | `pn-rhi` `barrier_derivation.rs` | 19 | Hand-computed barrier timelines, and the hazards that are rejected rather than papered over |
-| **Total** | **86** | |
+| `pn-render-graph` `compilation.rs` | 20 | Ordering semantics, culling to a fixed point, lifetime spans, four classes of graph hazard, and the visualization |
+| **Total** | **106** | |
 
 Concurrency soak beyond the matrix: 48 further runs of the two jobs suites under
 ThreadSanitizer (both compilers) and AddressSanitizer, zero failures and zero
@@ -119,6 +120,17 @@ warnings.
 | What is demonstrated | Sync, access, and arrangement are three independent axes; barriers are derived from declared pass intents rather than written by passes; hand-computed timelines for a four-pass frame are asserted exactly; seven classes of hazard are rejected rather than turned into an over-conservative barrier; a chain of sixteen identical readers costs one barrier, not sixteen |
 | Why not `VERIFIED` | Two things are missing, and neither is a formality. The acceptance criterion names **the reference backend** (ADR-0005), which does not exist yet - these tests exercise the derivation directly. And ADR-0006 requires the **hardware debug layer with synchronization validation to be silent** before this is verified, which needs a GPU (`BLOCK-002`) and validation layers (`BLOCK-004`) |
 | Defect found | The derivation initially treated read-after-read as always free. It is not: a barrier makes a write visible to the reader's stages, so a second reader in a stage nobody has synchronised for still races the writer even though the arrangement has not changed. Caught by a test written to separate the two cases |
+
+### PN-RND-005 - Render graph
+
+| Field | Value |
+|---|---|
+| State | `IMPLEMENTED_UNVERIFIED` |
+| Implementation | `rust/crates/pn-render-graph/src/{graph,compile,visualize}.rs` |
+| Tests | `rust/crates/pn-render-graph/tests/compilation.rs` (20 tests) |
+| What is demonstrated | Both halves of the acceptance criterion. Hazards detected by test: reading a transient nothing wrote, using a buffer as a texture, a barrier-derivation rejection surfacing rather than being swallowed, and a write discarded by a later write. Plus culling iterated to a fixed point through a three-pass chain, pinned passes surviving with no consumer, lifetime spans in execution order with an aliasing candidate set, and a DOT visualization asserted byte for byte |
+| Why not `VERIFIED` | The requirement says **data-driven**, and this graph is built through a Rust API rather than from data. Pass declarations coming from a config or asset does not exist. Separately, nothing has recorded a compiled graph on hardware |
+| Defects found | Two, both mine, both found by tests whose premise turned out to be wrong. `disjoint_from` offered a persistent resource as an aliasing candidate because it filtered on lifetime span alone - the swapchain image is not the graph's memory to reuse. And the ordering semantics were never stated: I had assumed the graph would reorder a consumer declared before its producer, which would mean moving a declaration silently changed which frame's contents a pass sampled. Declaration order versions resources, so that case is a hazard, not a reordering opportunity, and a consequence is that dependency edges always run forward and the cycle check is an invariant guard rather than a feature. Both facts are now written down and asserted |
 
 ## Documented conventions with enforcing tests
 

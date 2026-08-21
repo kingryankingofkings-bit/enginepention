@@ -68,6 +68,24 @@ ENGINE_INCLUDE = re.compile(r'#\s*include\s*[<"]pn/(\w+)/')
 
 SOURCE_SUFFIXES = (".hpp", ".cpp", ".h", ".cc", ".inl")
 
+# The Rust half of the engine lives in its own crates, but it is the same
+# dependency graph. Mapping each crate onto a module name means one graph
+# governs both languages - otherwise the C++ side is enforced and the Rust side
+# drifts on convention, which is the situation ADR-0004 rule 2 exists to prevent.
+#
+# A crate absent from this map fails the check rather than being skipped. A new
+# crate must say where it sits.
+RUST_CRATE_MODULES: dict[str, str] = {
+    "pn-jobs-sys": "jobs",
+    "pn-jobs": "jobs",
+    "pn-rhi": "rhi",
+    "pn-vulkan-sys": "rhi",
+    "pn-render-graph": "rendergraph",
+    # Build tooling. It runs on the host, ships in nothing, and sits outside the
+    # runtime graph entirely.
+    "vkgen": None,
+}
+
 
 
 def _is_generated(path: Path) -> bool:
@@ -88,12 +106,87 @@ def module_of(path: Path, engine_root: Path) -> str | None:
     return relative.parts[0] if relative.parts else None
 
 
+def rust_crate_of(manifest: Path) -> str | None:
+    """The crate name from a manifest, without parsing the whole file."""
+    for line in manifest.read_text(encoding="utf-8").splitlines():
+        match = re.match(r'\s*name\s*=\s*"([^"]+)"', line)
+        if match:
+            return match.group(1)
+    return None
+
+
+def check_rust(repo_root: Path) -> list[str]:
+    """Applies the same graph to the Rust crates.
+
+    Dependency edges are read from each manifest's path dependencies rather than
+    from `use` statements: a crate cannot name another crate it does not depend
+    on, so the manifest is the complete and authoritative edge list.
+    """
+    rust_root = repo_root / "rust"
+    failures: list[str] = []
+    if not rust_root.is_dir():
+        return failures
+
+    manifests = sorted(
+        path for path in rust_root.rglob("Cargo.toml")
+        if "target" not in path.parts and "rust-target" not in path.parts
+        and path.parent != rust_root
+    )
+
+    for manifest in manifests:
+        relative = manifest.relative_to(repo_root)
+        crate = rust_crate_of(manifest)
+        if crate is None:
+            failures.append(f"{relative}: no package name found")
+            continue
+        if crate not in RUST_CRATE_MODULES:
+            failures.append(
+                f"{relative}: crate '{crate}' is not declared in RUST_CRATE_MODULES. "
+                f"Say which module it belongs to in this script."
+            )
+            continue
+
+        module = RUST_CRATE_MODULES[crate]
+        if module is None:
+            continue  # host tooling, outside the runtime graph
+        if module not in ALLOWED_DEPENDENCIES:
+            failures.append(
+                f"{relative}: crate '{crate}' maps to module '{module}', which is not "
+                f"in ALLOWED_DEPENDENCIES."
+            )
+            continue
+
+        permitted = ALLOWED_DEPENDENCIES[module]
+        for line in manifest.read_text(encoding="utf-8").splitlines():
+            match = re.match(r'\s*([A-Za-z0-9_-]+)\s*=\s*\{[^}]*path\s*=', line)
+            if not match:
+                continue
+            dependency = match.group(1)
+            target = RUST_CRATE_MODULES.get(dependency)
+            if dependency not in RUST_CRATE_MODULES:
+                failures.append(
+                    f"{relative}: depends on '{dependency}', which is not declared in "
+                    f"RUST_CRATE_MODULES."
+                )
+                continue
+            if target is None or target == module:
+                continue
+            if target not in permitted:
+                failures.append(
+                    f"{relative}: crate '{crate}' (module '{module}') depends on "
+                    f"'{dependency}' (module '{target}'), which is not below it in the "
+                    f"dependency graph. Permitted: {sorted(permitted) or 'nothing'}. "
+                    f"(ADR-0004 rule 2)"
+                )
+    return failures
+
+
 def check(repo_root: Path) -> list[str]:
     engine_root = repo_root / "engine"
-    failures: list[str] = []
+    failures: list[str] = check_rust(repo_root)
 
     if not engine_root.is_dir():
-        return ["engine/ directory not found"]
+        return failures + ["engine/ directory not found"]
 
     for path in sorted(engine_root.rglob("*")):
         if _is_generated(path):

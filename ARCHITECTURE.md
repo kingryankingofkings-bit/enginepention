@@ -122,9 +122,24 @@ See [ADR-0006](docs/adr/ADR-0006-rhi-barrier-model.md) and
 [ADR-0005](docs/adr/ADR-0005-reference-backend.md). Barriers carry three
 independent axes (sync scope, access, layout); passes declare intents and never
 emit barriers; the render graph derives the minimal barrier set over the pass
-DAG and lowers it to the active backend. Three backends are planned: D3D12
-(first production), Vulkan (second), and an in-project reference backend for
-validation on hosts without a GPU.
+DAG and lowers it to the active backend.
+
+Both halves now exist in Rust, above no graphics API at all: `pn-rhi` owns the
+three-axis vocabulary and the derivation, `pn-render-graph` owns the pass DAG,
+culling, resource lifetimes, hazard validation, and a DOT visualization.
+
+Declaration order versions resources: a read sees the contents written by the
+most recently declared writer before it, and for a transient with no such writer
+that is a hazard rather than a reordering opportunity. The alternative would mean
+moving a pass declaration silently changed which frame's contents it sampled.
+
+Backends remain planned rather than present. Vulkan is now first
+([ADR-0009](docs/adr/ADR-0009-hybrid-rust-cpp.md)), with its type and command
+surface generated from the Khronos registry
+([ADR-0010](docs/adr/ADR-0010-vulkan-bindings-from-the-registry.md)); D3D12
+follows; and an in-project reference backend
+([ADR-0005](docs/adr/ADR-0005-reference-backend.md)) is what would let the
+derivation be validated on a host without a GPU. None of the three is written.
 
 ## 9. Asset identity, database, and cooking
 

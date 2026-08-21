@@ -34,3 +34,36 @@ Authorship header check passed
 exit=0
 Module layering check passed
 exit=0
+
+================================================================================
+Rust-side layering, added 2026-08-21
+================================================================================
+
+The dependency graph now governs both languages. Before this, the C++ half was
+enforced and the Rust half ran on convention - which is the situation ADR-0004
+rule 2 exists to prevent. Edges are read from each manifest's path dependencies,
+because a crate cannot name another crate it does not depend on, so the manifest
+is the complete edge list rather than a sample of it.
+
+=== 5. A crate that does not say where it sits ===
+Module layering check FAILED
+  rust/crates/pn-mystery/Cargo.toml: crate 'pn-mystery' is not declared in RUST_CRATE_MODULES. Say which module it belongs to in this script.
+
+A cycle or an upward edge means a module boundary is wrong. Fix the boundary rather than widening the graph to accommodate the include.
+exit=1
+
+=== 6. An upward edge, jobs -> rhi ===
+Module layering check FAILED
+  rust/crates/pn-jobs/Cargo.toml: crate 'pn-jobs' (module 'jobs') depends on 'pn-rhi' (module 'rhi'), which is not below it in the dependency graph. Permitted: ['core', 'math', 'platform']. (ADR-0004 rule 2)
+
+A cycle or an upward edge means a module boundary is wrong. Fix the boundary rather than widening the graph to accommodate the include.
+exit=1
+
+=== 7. Two crates in the same module may depend on each other ===
+pn-rhi depending on pn-vulkan-sys is not a violation: both are the 'rhi' module,
+and the graph constrains edges between modules, not within one. Verified to pass.
+exit=0
+
+=== 8. The check passes again once the violations are removed ===
+Module layering check passed
+exit=0

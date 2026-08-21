@@ -14,6 +14,13 @@ name = "pn-jobs-sys"
 version = "0.0.1"
 
 [[package]]
+name = "pn-render-graph"
+version = "0.0.1"
+dependencies = [
+ "pn-rhi",
+]
+
+[[package]]
 name = "pn-rhi"
 version = "0.0.1"
 

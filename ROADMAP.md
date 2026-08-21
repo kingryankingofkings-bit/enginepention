@@ -24,8 +24,8 @@ the skill is level 5.
 Within Phase 3, the Tier A pieces that exist are the build system, the test
 framework, math, core, platform, and the job scheduler; plus, on the Rust side,
 the generated Vulkan type and command surface
-([ADR-0010](docs/adr/ADR-0010-vulkan-bindings-from-the-registry.md)) and barrier
-derivation (`pn-rhi`). No instance has been created and no frame has been drawn,
+([ADR-0010](docs/adr/ADR-0010-vulkan-bindings-from-the-registry.md)), barrier
+derivation (`pn-rhi`), and the render graph (`pn-render-graph`). No instance has been created and no frame has been drawn,
 so **M0 has not been reached** - and M2's barrier work landing before M0 is not
 progress out of order, it is the part of M2 that a machine with no GPU can
 actually verify.
@@ -36,7 +36,7 @@ actually verify.
 |---|---|---|---|---|
 | M0 | Instance, device, swapchain, clear | Validation layers silent; clean resize and shutdown | 3 | NOT_STARTED - blocked from verification by `BLOCK-002` and `BLOCK-004` |
 | M1 | Bindless textured mesh | One global descriptor array; pipeline cache on disk | 3 | NOT_STARTED |
-| M2 | Render graph and depth prepass | Barriers fully derived; reversed-Z verified | 3 | Barrier derivation is implemented and tested (`pn-rhi`, 19 tests); reversed-Z projection is implemented and tested. The graph that orders the passes is PN-RND-005 and is NOT_STARTED |
+| M2 | Render graph and depth prepass | Barriers fully derived; reversed-Z verified | 3 | Barriers derived (`pn-rhi`, 19 tests) and the graph that orders the passes exists (`pn-render-graph`, 20 tests); reversed-Z projection is implemented and tested. What is missing is a pass that draws anything, which needs M0 |
 | M3 | glTF import, PBR opaque, IBL | Matches a reference render of the same scene | 3-4 | NOT_STARTED |
 | M4 | Job system, ECS, parallel recording | Frame scales with core count; no data races | 3 | Job system built and TSan-clean; ECS and parallel recording NOT_STARTED. Scaling with core count is **not** demonstrated and cannot be on a four-core host |
 | M5 | Clustered lights, cascaded shadows | 1000+ lights; stable shadows | 4-5 | NOT_STARTED |
