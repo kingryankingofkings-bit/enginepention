@@ -128,3 +128,122 @@ PN_TEST(framework, describe_falls_back_for_unprintable_types) {
     // A comparison macro must still work on a type with no stream operator.
     PN_CHECK_EQ(NotPrintable{7}, NotPrintable{7});
 }
+
+// ---------------------------------------------------------------------------
+// Single-evaluation guarantee
+//
+// Regression tests. The comparison macros originally expanded each operand
+// twice - once to compare and once to build the failure message - so any
+// argument with a side effect ran twice, in unspecified order. It was found by
+// a FrameCounter test whose advance() was called twice per check, and it had
+// been silently corrupting side-effecting assertions until then.
+//
+// These pin the guarantee for every macro that takes operands.
+// ---------------------------------------------------------------------------
+
+namespace {
+
+/// Counts how many times it is read.
+struct EvaluationCounter {
+    int* calls;
+    int value;
+
+    [[nodiscard]] int read() const {
+        ++(*calls);
+        return value;
+    }
+};
+
+}  // namespace
+
+PN_TEST(framework, check_eq_evaluates_each_operand_exactly_once) {
+    int left_calls = 0;
+    int right_calls = 0;
+    const EvaluationCounter left{&left_calls, 5};
+    const EvaluationCounter right{&right_calls, 5};
+
+    PN_CHECK_EQ(left.read(), right.read());
+
+    PN_CHECK_EQ(left_calls, 1);
+    PN_CHECK_EQ(right_calls, 1);
+}
+
+namespace {
+
+int g_failing_path_calls = 0;
+
+/// Deliberately fails a comparison whose left operand has a side effect, then
+/// asserts the operand ran exactly once. Run under observation so the
+/// deliberate failure does not fail the suite.
+void body_failing_comparison_evaluates_once(TestContext& pn_ctx_) {
+    g_failing_path_calls = 0;
+    const EvaluationCounter counter{&g_failing_path_calls, 1};
+    PN_CHECK_EQ(counter.read(), 999);          // deliberate failure
+    PN_CHECK_EQ(g_failing_path_calls, 1);      // exactly one evaluation despite failing
+}
+
+}  // namespace
+
+PN_TEST(framework, check_eq_evaluates_once_even_when_the_check_fails) {
+    // The failing path is the one that regressed: the second evaluation existed
+    // only to format the failure message, so a passing check never exposed it.
+    const TestOutcome outcome = observe(&body_failing_comparison_evaluates_once);
+
+    // Exactly one deliberate failure, and the follow-up call-count check passed.
+    PN_CHECK_EQ(outcome.checks_failed, 1u);
+    PN_CHECK_EQ(outcome.checks_run, 2u);
+    PN_CHECK_EQ(g_failing_path_calls, 1);
+}
+
+PN_TEST(framework, ordering_comparisons_evaluate_each_operand_once) {
+    int calls = 0;
+    const EvaluationCounter counter{&calls, 3};
+
+    PN_CHECK_LT(counter.read(), 10);
+    PN_CHECK_EQ(calls, 1);
+
+    calls = 0;
+    PN_CHECK_GE(counter.read(), 1);
+    PN_CHECK_EQ(calls, 1);
+
+    calls = 0;
+    PN_CHECK_NE(counter.read(), 99);
+    PN_CHECK_EQ(calls, 1);
+}
+
+PN_TEST(framework, require_eq_evaluates_each_operand_once) {
+    int calls = 0;
+    const EvaluationCounter counter{&calls, 7};
+    PN_REQUIRE_EQ(counter.read(), 7);
+    PN_CHECK_EQ(calls, 1);
+}
+
+PN_TEST(framework, near_evaluates_each_operand_once) {
+    int calls = 0;
+    int tolerance_calls = 0;
+    const EvaluationCounter value{&calls, 1};
+    const EvaluationCounter tolerance{&tolerance_calls, 1};
+
+    PN_CHECK_NEAR(static_cast<double>(value.read()), 1.0,
+                  static_cast<double>(tolerance.read()));
+    PN_CHECK_EQ(calls, 1);
+    PN_CHECK_EQ(tolerance_calls, 1);
+}
+
+PN_TEST(framework, check_evaluates_its_expression_exactly_once) {
+    int calls = 0;
+    const EvaluationCounter counter{&calls, 1};
+    PN_CHECK(counter.read() == 1);
+    PN_CHECK_EQ(calls, 1);
+}
+
+PN_TEST(framework, a_mutating_expression_advances_exactly_one_step_per_check) {
+    // The shape of the original bug, reduced: a counter that advances on read.
+    int state = 0;
+    const auto advance = [&state] { return ++state; };
+
+    PN_CHECK_EQ(advance(), 1);
+    PN_CHECK_EQ(advance(), 2);
+    PN_CHECK_EQ(advance(), 3);
+    PN_CHECK_EQ(state, 3);
+}

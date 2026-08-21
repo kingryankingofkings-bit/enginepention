@@ -58,6 +58,7 @@ endif()
 
 add_subdirectory(engine/math)
 add_subdirectory(engine/core)
+add_subdirectory(engine/platform)
 
 # ---------------------------------------------------------------------------
 # Summary

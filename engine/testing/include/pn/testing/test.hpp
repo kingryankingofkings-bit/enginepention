@@ -127,6 +127,30 @@ std::string describe(const T& value) {
     }
 }
 
+/// Compares two values, evaluating each exactly once.
+///
+/// The operands arrive as function parameters, so the caller's expressions are
+/// evaluated before the call and never again. An earlier version of this
+/// framework expanded each operand twice inside the macro - once for the
+/// comparison and once for the failure message - which double-called anything
+/// with a side effect, and did so in unspecified order, so the reported values
+/// did not even match the ones compared.
+template <typename T>
+[[nodiscard]] bool within_tolerance(T lhs, T rhs, T tolerance) noexcept {
+    const T difference = lhs > rhs ? lhs - rhs : rhs - lhs;
+    return difference <= tolerance;
+}
+
+template <typename T>
+[[nodiscard]] std::string describe_tolerance(T lhs, T rhs, T tolerance) {
+    const T difference = lhs > rhs ? lhs - rhs : rhs - lhs;
+    std::ostringstream os;
+    os.precision(17);
+    os << lhs << " vs " << rhs << " (difference " << difference
+       << ", tolerance " << tolerance << ')';
+    return os.str();
+}
+
 template <typename A, typename B>
 std::string describe_comparison(const A& lhs, const B& rhs, std::string_view op) {
     std::string out;
@@ -137,6 +161,40 @@ std::string describe_comparison(const A& lhs, const B& rhs, std::string_view op)
     out += describe(rhs);
     return out;
 }
+
+template <typename A, typename B, typename Compare>
+bool compare_values(TestContext& ctx,
+                    const A& lhs,
+                    const B& rhs,
+                    Compare compare,
+                    std::string_view expression,
+                    std::string_view failure_op,
+                    std::source_location where,
+                    bool fatal) {
+    if (compare(lhs, rhs)) {
+        ctx.record_pass();
+        return true;
+    }
+    ctx.record_failure(expression, describe_comparison(lhs, rhs, failure_op), where, fatal);
+    return false;
+}
+
+/// Absolute-tolerance comparison, evaluating each operand exactly once.
+template <typename T>
+bool compare_near(TestContext& ctx,
+                  T lhs,
+                  T rhs,
+                  T tolerance,
+                  std::string_view expression,
+                  std::source_location where) {
+    if (within_tolerance(lhs, rhs, tolerance)) {
+        ctx.record_pass();
+        return true;
+    }
+    ctx.record_failure(expression, describe_tolerance(lhs, rhs, tolerance), where, false);
+    return false;
+}
+
 
 }  // namespace detail
 }  // namespace pn::testing
@@ -191,10 +249,10 @@ std::string describe_comparison(const A& lhs, const B& rhs, std::string_view op)
     } while (false)
 
 #define PN_TEST_DETAIL_BINARY(lhs_, rhs_, op_, opname_, fatal_)                       \
-    ::pn::testing::detail::evaluate(                                                  \
-        pn_ctx_, ::pn::testing::detail::truth((lhs_)op_(rhs_)),                        \
-        #lhs_ " " #op_ " " #rhs_,                                                       \
-        ::pn::testing::detail::describe_comparison((lhs_), (rhs_), opname_),           \
+    ::pn::testing::detail::compare_values(                                            \
+        pn_ctx_, (lhs_), (rhs_),                                                       \
+        [](const auto& pn_lhs_, const auto& pn_rhs_) { return pn_lhs_ op_ pn_rhs_; },  \
+        #lhs_ " " #op_ " " #rhs_, opname_,                                             \
         std::source_location::current(), fatal_)
 
 #define PN_CHECK_EQ(lhs_, rhs_) PN_TEST_DETAIL_BINARY(lhs_, rhs_, ==, "!=", false)
@@ -216,36 +274,13 @@ std::string describe_comparison(const A& lhs, const B& rhs, std::string_view op)
 /// a given distance), so tests assert in those terms. Relative comparison would
 /// obscure exactly the property being measured.
 #define PN_CHECK_NEAR(lhs_, rhs_, tol_)                                              \
-    ::pn::testing::detail::evaluate(                                                 \
-        pn_ctx_,                                                                     \
-        ::pn::testing::detail::truth(                                                \
-            ::pn::testing::detail::within_tolerance((lhs_), (rhs_), (tol_))),         \
-        #lhs_ " ~= " #rhs_,                                                          \
-        ::pn::testing::detail::describe_tolerance((lhs_), (rhs_), (tol_)),           \
-        std::source_location::current(), false)
+    ::pn::testing::detail::compare_near(pn_ctx_, (lhs_), (rhs_), (tol_),              \
+                                        #lhs_ " ~= " #rhs_,                           \
+                                        std::source_location::current())
 
 #define PN_FAIL(message_)                                                     \
     ::pn::testing::detail::evaluate(pn_ctx_, false, "PN_FAIL", (message_),    \
                                     std::source_location::current(), false)
 
-namespace pn::testing::detail {
-
-template <typename T>
-[[nodiscard]] bool within_tolerance(T lhs, T rhs, T tolerance) noexcept {
-    const T difference = lhs > rhs ? lhs - rhs : rhs - lhs;
-    return difference <= tolerance;
-}
-
-template <typename T>
-[[nodiscard]] std::string describe_tolerance(T lhs, T rhs, T tolerance) {
-    const T difference = lhs > rhs ? lhs - rhs : rhs - lhs;
-    std::ostringstream os;
-    os.precision(17);
-    os << lhs << " vs " << rhs << " (difference " << difference
-       << ", tolerance " << tolerance << ')';
-    return os.str();
-}
-
-}  // namespace pn::testing::detail
 
 #endif  // PN_TESTING_TEST_HPP
