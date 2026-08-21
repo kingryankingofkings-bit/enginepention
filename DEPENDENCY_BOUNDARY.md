@@ -78,7 +78,7 @@ party's authored file - but the pin is, in
 `build_scripts/vulkan_registry_pin.txt`, so any reviewer can re-fetch the same
 bytes. `build_scripts/check_generated_bindings.py` re-derives the committed
 output in CI and fails on a hand edit. See
-[ADR-0010](docs/ADR-0010-vulkan-bindings-from-the-registry.md).
+[ADR-0010](docs/adr/ADR-0010-vulkan-bindings-from-the-registry.md).
 
 The trade is worth stating plainly: this is *more* provenance-clean than a
 binding crate would be, not a grudging substitute for one. There is no

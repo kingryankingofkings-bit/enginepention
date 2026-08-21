@@ -12,7 +12,7 @@ and several thousand constants in Rust before a single call can be made.
 
 The usual answer is the `ash` crate. It is not available here. The Grandmaster
 Prompt section 3.1 prohibits third-party dependencies, and
-[DEPENDENCY_BOUNDARY.md](../DEPENDENCY_BOUNDARY.md) records that crates.io is
+[DEPENDENCY_BOUNDARY.md](../../DEPENDENCY_BOUNDARY.md) records that crates.io is
 not an exception to that rule - a package manager is a package manager whether
 it is vcpkg or cargo, and a permissive licence does not turn borrowed code into
 custom-built code.

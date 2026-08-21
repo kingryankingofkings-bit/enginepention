@@ -63,7 +63,7 @@ libraries CMake produces. The Rust workspace declares **zero** external
 dependencies - crates.io is prohibited on the same terms as any other package
 manager, which is why the Vulkan bindings are generated from the official
 Khronos registry rather than taken from `ash`. See
-[ADR-0010](docs/ADR-0010-vulkan-bindings-from-the-registry.md).
+[ADR-0010](docs/adr/ADR-0010-vulkan-bindings-from-the-registry.md).
 
 `vk.xml` is not committed; `build_scripts/vulkan_registry_pin.txt` pins its URL
 and SHA-256 so any reviewer can re-fetch the same bytes, and CI re-derives the
@@ -89,17 +89,20 @@ proceeds.
 | Document | Purpose |
 |---|---|
 | [ARCHITECTURE.md](ARCHITECTURE.md) | Process model, module boundaries, frame pipeline, and what is deliberately still open |
+| [ROADMAP.md](ROADMAP.md) | The ten-phase program mapped onto the M0-M12 rendering ladder, with the current position marked |
+| [PERFORMANCE_BUDGETS.md](PERFORMANCE_BUDGETS.md) | Frame, memory, latency, and pipeline targets. Every figure is a target; the measured column is empty |
 | [docs/conventions.md](docs/conventions.md) | Binding conventions, each naming the test that enforces it |
 | [FEATURE_REQUIREMENTS_CATALOG.md](FEATURE_REQUIREMENTS_CATALOG.md) | 214 requirements with tier, dependencies, test method, and state |
 | [FEATURE_TRACEABILITY_MATRIX.md](FEATURE_TRACEABILITY_MATRIX.md) | What is actually verified, and what is only implemented |
 | [docs/INSTRUCTION_CONFLICTS.md](docs/INSTRUCTION_CONFLICTS.md) | Conflicts between instruction sources, and how each was resolved |
 | [RESEARCH_GAPS.md](RESEARCH_GAPS.md) | What could not be established, and why |
 | [TECHNIQUE_RISK_REGISTER.md](TECHNIQUE_RISK_REGISTER.md) | Legal, provenance, feasibility, hardware, and maintenance risk |
-| [docs/adr/](docs/adr/) | Six architecture decision records |
+| [docs/adr/](docs/adr/) | Ten architecture decision records |
 
 ## A note on performance claims
 
 There are none, and there will be none until there is hardware to measure on.
-No figure in this repository is a measurement of rendering performance; where
-budgets appear they are labelled as targets. A target is never rewritten as an
-achievement.
+No figure in this repository is a measurement of rendering performance.
+[PERFORMANCE_BUDGETS.md](PERFORMANCE_BUDGETS.md) states targets and keeps its
+Measured column empty and its results log empty, which is the honest state. A
+target is never rewritten as an achievement.
