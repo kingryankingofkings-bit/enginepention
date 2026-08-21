@@ -118,7 +118,7 @@ requirement is genuinely Windows-specific.
 |---|---|---|---|---|---|
 | PN-RND-001 | Explicit graphics API abstraction: adapter selection, feature queries, queues | A | PN-PLT-018 | Enumerates adapters; capability query drives a fallback decision | BLOCKED (`BLOCK-002`) - type and command surface generated and compiling ([ADR-0010](docs/adr/ADR-0010-vulkan-bindings-from-the-registry.md)); no adapter has been enumerated because no GPU is present |
 | PN-RND-002 | Command submission, resource creation, descriptor management | A | PN-RND-001 | Validation layers silent across a full frame | BLOCKED (`BLOCK-002`, `BLOCK-004` for validation layers) |
-| PN-RND-003 | Synchronization and barriers as independent sync/access/layout axes | A | PN-RND-001 | Barrier derivation unit-tested on the reference backend without a GPU | NOT_STARTED |
+| PN-RND-003 | Synchronization and barriers as independent sync/access/layout axes | A | PN-RND-001 | Barrier derivation unit-tested on the reference backend without a GPU | IMPLEMENTED_UNVERIFIED |
 | PN-RND-004 | Transient resources, upload/readback, device-loss recovery | A | PN-RND-002 | Induced device removal recovers rather than crashes | BLOCKED (`BLOCK-002`) |
 | PN-RND-005 | Data-driven render graph with lifetime analysis and hazard validation | A | PN-RND-003 | Hazard cases detected by test; graph emits a pass/resource visualization | NOT_STARTED |
 | PN-RND-006 | Transient memory aliasing in the render graph | A | PN-RND-005 | Total allocation strictly below the naive per-resource sum | NOT_STARTED |

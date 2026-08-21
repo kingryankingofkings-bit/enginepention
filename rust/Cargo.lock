@@ -14,6 +14,10 @@ name = "pn-jobs-sys"
 version = "0.0.1"
 
 [[package]]
+name = "pn-rhi"
+version = "0.0.1"
+
+[[package]]
 name = "pn-vulkan-sys"
 version = "0.0.1"
 

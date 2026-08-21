@@ -7,8 +7,8 @@ tests, and the evidence supporting its current state.
 acceptance evidence both exist.** An interface, a stub, a passing compile, or a
 design document is not evidence.
 
-Current totals: **5 `VERIFIED`**, 14 `IMPLEMENTED_UNVERIFIED`, 18 `BLOCKED`,
-177 `NOT_STARTED`, of 214. Nothing is `DEFERRED_BY_SCOPE`.
+Current totals: **5 `VERIFIED`**, 15 `IMPLEMENTED_UNVERIFIED`, 18 `BLOCKED`,
+176 `NOT_STARTED`, of 214. Nothing is `DEFERRED_BY_SCOPE`.
 
 No requirement changed state in the Vulkan binding increment. The bindings are
 infrastructure under PN-RND-001, which stays `BLOCKED`: nothing here has
@@ -23,7 +23,7 @@ requirement rather than rounded up.
 ## Test totals, as counted from the built binaries
 
 162 registered C++ tests across 14 binaries, executing 12,483 assertions, plus
-67 Rust tests across 6 suites. All pass. Counted by running each binary rather
+86 Rust tests across 7 suites. All pass. Counted by running each binary rather
 than by reading the source, because a test that fails to register is invisible
 to a source count.
 
@@ -73,7 +73,8 @@ different things:
 | `vkgen` `emit.rs` | 11 | Emitted shape: transparent newtypes, bit 63 unsigned, C array extent order, keyword escaping, dispatch-table classification |
 | `vkgen` `sha256.rs` | 6 | FIPS PUB 180-4 published vectors |
 | `pn-vulkan-sys` `bindings.rs` | 15 | Constant values and layouts against the Vulkan specification |
-| **Total** | **67** | |
+| `pn-rhi` `barrier_derivation.rs` | 19 | Hand-computed barrier timelines, and the hazards that are rejected rather than papered over |
+| **Total** | **86** | |
 
 Concurrency soak beyond the matrix: 48 further runs of the two jobs suites under
 ThreadSanitizer (both compilers) and AddressSanitizer, zero failures and zero
@@ -107,6 +108,17 @@ warnings.
 | PN-PLT-003 | Monotonic time, fixed and variable ticks, frame pacing | `IMPLEMENTED_UNVERIFIED` | `FixedTimestep` is a pure function of its deltas, so pacing is tested deterministically: simulation time conserved exactly over 1,000 uneven frames, oversized deltas clamped, step count capped against a spiral, negative deltas neutralised | Simulation pause/step and time scaling do not exist |
 | PN-PLT-012 | Thread abstraction, affinity, naming | `IMPLEMENTED_UNVERIFIED` | Hardware thread count never returns zero; naming is best-effort and safe from any thread | Affinity is not implemented |
 | PN-PHY-016 | Fixed-step policy with render interpolation | `IMPLEMENTED_UNVERIFIED` | The accumulator and interpolation factor are implemented and tested | Its acceptance criterion is "no visible stutter", which needs a renderer that does not exist |
+
+### PN-RND-003 - Synchronization and barriers
+
+| Field | Value |
+|---|---|
+| State | `IMPLEMENTED_UNVERIFIED` |
+| Implementation | `rust/crates/pn-rhi/src/{barrier,derive}.rs` |
+| Tests | `rust/crates/pn-rhi/tests/barrier_derivation.rs` (19 tests) |
+| What is demonstrated | Sync, access, and arrangement are three independent axes; barriers are derived from declared pass intents rather than written by passes; hand-computed timelines for a four-pass frame are asserted exactly; seven classes of hazard are rejected rather than turned into an over-conservative barrier; a chain of sixteen identical readers costs one barrier, not sixteen |
+| Why not `VERIFIED` | Two things are missing, and neither is a formality. The acceptance criterion names **the reference backend** (ADR-0005), which does not exist yet - these tests exercise the derivation directly. And ADR-0006 requires the **hardware debug layer with synchronization validation to be silent** before this is verified, which needs a GPU (`BLOCK-002`) and validation layers (`BLOCK-004`) |
+| Defect found | The derivation initially treated read-after-read as always free. It is not: a barrier makes a write visible to the reader's stages, so a second reader in a stage nobody has synchronised for still races the writer even though the arrangement has not changed. Caught by a test written to separate the two cases |
 
 ## Documented conventions with enforcing tests
 

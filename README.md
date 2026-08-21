@@ -31,14 +31,14 @@ is on authorship, not on licensing.
 | 3 - Toolchain bootstrap and Tier A core | In progress |
 | 4-9 | Not started |
 
-Of 214 catalogued requirements: **5 are `VERIFIED`**, 14 are
+Of 214 catalogued requirements: **5 are `VERIFIED`**, 15 are
 `IMPLEMENTED_UNVERIFIED`, 18 are `BLOCKED` by this environment, and the
-remaining 177 are `NOT_STARTED`. Nothing is `DEFERRED_BY_SCOPE`. See
+remaining 176 are `NOT_STARTED`. Nothing is `DEFERRED_BY_SCOPE`. See
 [FEATURE_TRACEABILITY_MATRIX.md](FEATURE_TRACEABILITY_MATRIX.md).
 
 ## What builds and passes today
 
-162 C++ tests across 14 binaries and 67 Rust tests across 6 suites, green in
+162 C++ tests across 14 binaries and 86 Rust tests across 7 suites, green in
 **10 build configurations** - GCC and Clang, Debug and Release, with exceptions
 disabled, and under ASan+UBSan and TSan. Reproduced from a fresh checkout on
 clean CI runners, not only on the machine it was written on.
@@ -53,6 +53,7 @@ clean CI runners, not only on the machine it was written on.
 | `rust/crates/pn-jobs` | Safe Rust over the C++ scheduler - Rust closures running on C++ worker threads, with panics contained at the boundary |
 | `rust/tools/vkgen` | Reads the official Khronos Vulkan registry and writes this project's Rust bindings from it. Includes a zero-dependency XML pull parser and a SHA-256 implemented from FIPS 180-4 |
 | `rust/crates/pn-vulkan-sys` | The generated Vulkan surface: 563 types and 229 commands for core 1.0-1.3 plus `VK_KHR_surface` and `VK_KHR_swapchain`. Nothing here is hand-written |
+| `rust/crates/pn-rhi` | Sync, access, and arrangement as three independent axes, and the derivation that turns declared pass intents into a barrier timeline. Talks to no graphics API, which is why it is testable without a GPU |
 
 ```sh
 cmake -S . -B build -G Ninja && cmake --build build && ctest --test-dir build
