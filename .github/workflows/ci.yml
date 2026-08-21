@@ -83,3 +83,15 @@ jobs:
 
       - name: Test
         run: ctest --test-dir build --output-on-failure
+
+      - name: Test pinned to a single core
+        # Runs the whole suite on one CPU. Three test defects were found this
+        # way, all the same shape: an assertion about what worker threads
+        # happened to do (which side won a race, whether a steal occurred)
+        # rather than about what the caller can observe. Those pass on a
+        # multi-core developer machine and fail on a small runner, which is the
+        # worst possible place to discover them.
+        #
+        # Cheap insurance: the suite takes seconds normally and under a minute
+        # pinned.
+        run: taskset -c 0 ctest --test-dir build --output-on-failure

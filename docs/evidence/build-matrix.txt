@@ -1,40 +1,45 @@
-Build and test matrix - hybrid Rust/C++ (ADR-0009)
-Captured: 2026-08-21T14:00:14Z
+Build and test matrix - hybrid Rust/C++.
+Each configuration is run TWICE: normally, and pinned to a single core
+(taskset -c 0).
+Captured: 2026-08-21T14:22:10Z
 
-gcc-debug                      rust=ON  100% tests passed, 0 tests failed out of 15
-gcc-release                    rust=ON  100% tests passed, 0 tests failed out of 15
-clang-debug                    rust=ON  100% tests passed, 0 tests failed out of 15
-clang-release                  rust=ON  100% tests passed, 0 tests failed out of 15
-gcc-no-exceptions              rust=ON  100% tests passed, 0 tests failed out of 15
-clang-no-exceptions            rust=ON  100% tests passed, 0 tests failed out of 15
-gcc-asan-ubsan                 rust=OFF 100% tests passed, 0 tests failed out of 14
-clang-asan-ubsan               rust=OFF 100% tests passed, 0 tests failed out of 14
-gcc-tsan                       rust=OFF 100% tests passed, 0 tests failed out of 14
-clang-tsan                     rust=OFF 100% tests passed, 0 tests failed out of 14
+gcc-debug                      normal=100% tests passed single-core=100% tests passed
+gcc-release                    normal=100% tests passed single-core=100% tests passed
+clang-debug                    normal=100% tests passed single-core=100% tests passed
+clang-release                  normal=100% tests passed single-core=100% tests passed
+gcc-no-exceptions              normal=100% tests passed single-core=100% tests passed
+clang-no-exceptions            normal=100% tests passed single-core=100% tests passed
+gcc-asan-ubsan                 normal=100% tests passed single-core=100% tests passed
+clang-asan-ubsan               normal=100% tests passed single-core=100% tests passed
+gcc-tsan                       normal=100% tests passed single-core=100% tests passed
+clang-tsan                     normal=100% tests passed single-core=100% tests passed
 
 --------------------------------------------------------------------------
-15 tests registered in the six non-sanitizer configurations: 14 C++ binaries
-plus the Rust boundary suite (9 tests). 14 in the four sanitizer
-configurations, where the Rust half is deliberately skipped.
+20 runs: 10 configurations, each run normally and pinned to a single core.
+All green. 15 tests in the six configurations that include Rust, 14 in the four
+sanitizer configurations where Rust is skipped.
 
-Why Rust is skipped under sanitizers, stated rather than glossed: a sanitizer
-build instruments the C++ archives, and linking those into a Rust binary that
-was not instrumented the same way produces link errors or a binary whose runtime
-checks disagree with each other. Stable Rust has no matching sanitizer support.
-The C++ side - which owns all the threading - keeps full sanitizer coverage.
-What is NOT covered is the FFI boundary itself under a sanitizer. That is a real
-gap, and it is recorded here rather than left implicit.
+Why the pinned column exists. CI on main went red at commit 9a3d2a5 with two
+failures, and neither was a defect in the engine:
 
-The hybrid boundary (ADR-0009) is exercised by tests on both sides:
-  - engine/jobs/tests/c_api_test.cpp    - 7 tests, C ABI from C++
-  - rust/crates/pn-jobs/tests/boundary.rs - 9 tests, Rust closures on C++ workers
+  g++ Release           FAIL  expression: owner_wins > 0    actual: 0 <= 0
+  clang++ asan-ubsan    FAIL  expression: thief_wins > 0    actual: 0 <= 0
 
-Both assert the crossing frequency directly: a 50,000-element loop at grain 512
-crosses the boundary 98 times, not 50,000. If a change ever makes the boundary
-fine-grained, those tests fail loudly instead of quietly costing an order of
-magnitude.
+Failing in OPPOSITE directions, while the correctness assertion - exactly one
+taker per round - passed 2000 of 2000 in both. A real ordering bug cannot
+produce "always exactly one winner, but always the same one". The guard was
+asserting a scheduling outcome.
 
-Also verified: a panicking Rust chunk body is contained at the trampoline and
-reported as an error rather than unwinding into C++ frames, which would be
-undefined behaviour; remaining chunks still run; and the scheduler stays usable
-afterwards.
+Reproduced locally by pinning to one core: the old test fails with the identical
+message, the new one passes. That reproduction is what distinguished "over-strict
+test" from "real race" - without it, the honest options would have been to guess
+or to leave main red.
+
+The pinned run then found a SECOND instance (the steal counter) and, after that
+was replaced, a THIRD in the replacement itself (steal_attempts). All three are
+now gone, and CI runs the suite pinned to one core so a fourth cannot land
+quietly.
+
+Scope limit unchanged: no graphics or renderer code exists, no GPU is present on
+this host (BLOCK-002), and no figure anywhere in this repository is a
+performance measurement.

@@ -146,17 +146,71 @@ PN_TEST(deque, single_item_is_taken_exactly_once_by_owner_or_thief) {
         }
     }
 
-    // Every round must have exactly one taker - that is the correctness claim,
-    // and it is asserted per round above.
+    // Exactly one taker per round is the correctness claim, and it is asserted
+    // per round above. Every round is accounted for.
     PN_CHECK_EQ(owner_wins + thief_wins, kRounds);
 
-    // Both outcomes must actually occur, or the test is not exercising the race
-    // it claims to and would pass just as happily against a broken deque. The
-    // rendezvous above is what makes this reliable; an earlier version without
-    // it saw zero thief wins under a sanitizer, where thread startup dominated
-    // the window being tested.
-    PN_CHECK_GT(owner_wins, 0);
-    PN_CHECK_GT(thief_wins, 0);
+    // NOTE: which side wins is deliberately NOT asserted.
+    //
+    // An earlier version required both outcomes to occur at least once, on the
+    // reasoning that a test which never contends proves nothing. That reasoning
+    // is sound but the assertion was not: which thread wins a few-instruction
+    // race is a property of the scheduler and the core count, not of the deque.
+    // It failed on CI in BOTH directions - one configuration saw the thief win
+    // all 2000 rounds, another saw the owner win all 2000 - while the
+    // exactly-one-taker invariant held 2000 of 2000 in each. A real ordering bug
+    // cannot produce "always exactly one winner, but always the same one".
+    //
+    // The concern it was trying to address is now met deterministically, by
+    // last_item_taken_by_the_owner and last_item_taken_by_a_thief below, which
+    // drive the contended branch down each side without depending on timing.
+}
+
+PN_TEST(deque, last_item_taken_by_the_owner) {
+    // Drives the same branch the concurrent race resolves - in pop_bottom,
+    // top == bottom, so the owner must settle the claim with a
+    // compare-exchange - but deterministically, with no second thread and no
+    // dependence on scheduling.
+    WorkStealingDeque<Item> deque{4};
+    Item item{42};
+    PN_REQUIRE(deque.push_bottom(&item));
+
+    Item* taken = deque.pop_bottom();
+    PN_REQUIRE(taken != nullptr);
+    PN_CHECK_EQ(taken->value, 42);
+
+    // Having lost the item, nobody else may take it.
+    PN_CHECK(deque.steal_top() == nullptr);
+    PN_CHECK(deque.pop_bottom() == nullptr);
+
+    // And the deque is reusable afterwards - the CAS must leave the indices
+    // consistent, not merely empty.
+    Item next{7};
+    PN_REQUIRE(deque.push_bottom(&next));
+    Item* again = deque.pop_bottom();
+    PN_REQUIRE(again != nullptr);
+    PN_CHECK_EQ(again->value, 7);
+}
+
+PN_TEST(deque, last_item_taken_by_a_thief) {
+    // The mirror image: a thief takes the only item, and the owner must then
+    // find nothing rather than handing out the same item twice.
+    WorkStealingDeque<Item> deque{4};
+    Item item{99};
+    PN_REQUIRE(deque.push_bottom(&item));
+
+    Item* stolen = deque.steal_top();
+    PN_REQUIRE(stolen != nullptr);
+    PN_CHECK_EQ(stolen->value, 99);
+
+    PN_CHECK(deque.pop_bottom() == nullptr);
+    PN_CHECK(deque.steal_top() == nullptr);
+
+    Item next{13};
+    PN_REQUIRE(deque.push_bottom(&next));
+    Item* again = deque.steal_top();
+    PN_REQUIRE(again != nullptr);
+    PN_CHECK_EQ(again->value, 13);
 }
 
 PN_TEST(deque, concurrent_drain_takes_every_item_exactly_once) {

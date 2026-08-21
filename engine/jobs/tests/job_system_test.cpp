@@ -6,7 +6,9 @@
 #include "pn/testing/test.hpp"
 
 #include <atomic>
+#include <chrono>
 #include <cstdint>
+#include <thread>
 #include <numeric>
 #include <vector>
 
@@ -324,35 +326,98 @@ PN_TEST(job_system, a_job_may_wait_on_children_it_creates) {
     PN_CHECK_EQ(inner_completions.load(std::memory_order_relaxed), 32);
 }
 
-PN_TEST(job_system, stealing_actually_happens_under_load) {
-    // If nothing is ever stolen, every other test here would still pass while
-    // the scheduler ran single-threaded. This asserts the mechanism is live.
+PN_TEST(job_system, work_submitted_from_the_main_thread_is_reachable_by_workers) {
+    // This is the structural property that a real defect once violated:
+    // schedule() pushes to the calling thread's deque, and if the steal loop
+    // does not include that deque, work submitted from the main thread is
+    // reachable by nobody but the main thread. Results stayed correct - the
+    // main thread ran everything itself - so every other test passed while the
+    // parallelism was silently zero.
+    //
+    // Deliberately does NOT call wait(), because wait() executes work on the
+    // calling thread and would mask exactly the defect being tested. Instead
+    // the main thread spins on a flag, so the job can only complete if a worker
+    // reached it. Before the fix this never completed; the deadline turns that
+    // into a failure rather than a hang.
+    //
+    // An earlier version of this test asserted the steal counter was non-zero.
+    // That is a scheduling outcome, not a structural property: on a single core
+    // the main thread drains its own deque before a worker is scheduled, so the
+    // assertion failed on a machine where nothing was wrong. Reachability holds
+    // on any core count.
+    StartedSystem fixture{2};
+    PN_REQUIRE(fixture.started);
+
+    std::atomic<bool> ran{false};
+    Job* job = fixture.system.create([&ran]() noexcept {
+        ran.store(true, std::memory_order_release);
+    });
+    PN_REQUIRE(job != nullptr);
+    PN_REQUIRE(fixture.system.schedule(job));
+
+    const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(10);
+    while (!ran.load(std::memory_order_acquire) &&
+           std::chrono::steady_clock::now() < deadline) {
+        std::this_thread::yield();
+    }
+
+    PN_CHECK(ran.load(std::memory_order_acquire));
+
+    // Drain properly so the fixture tears down cleanly.
+    fixture.system.wait(job);
+}
+
+PN_TEST(job_system, only_structural_counters_are_asserted) {
+    // The statistics exist for diagnostics, and exactly one of them is a
+    // structural property.
+    //
+    // `executed` is: every scheduled job runs exactly once, whoever runs it.
+    // That holds on any core count.
+    //
+    // `stolen` and `steal_attempts` are NOT. Both describe what worker threads
+    // did, and on a single core a worker may never be scheduled at all before
+    // the calling thread has finished the work itself - so it never runs dry,
+    // and never even attempts a steal.
+    //
+    // This distinction cost three separate test defects to learn, each the same
+    // shape: deque owner-vs-thief win counts, then the steal counter, then
+    // steal_attempts - which an earlier version of THIS test asserted, with a
+    // comment confidently calling it structural. It was not. The rule that
+    // actually holds: assert what the caller can observe, never what the
+    // workers happened to do.
     StartedSystem fixture{3};
     PN_REQUIRE(fixture.started);
 
+    constexpr int kChildren = 500;
     std::atomic<int> done{0};
+
     Job* root = fixture.system.create([]() noexcept {});
     PN_REQUIRE(root != nullptr);
 
-    for (int i = 0; i < 2000; ++i) {
+    int scheduled = 0;
+    for (int i = 0; i < kChildren; ++i) {
         Job* child = fixture.system.create_child(root, [&done]() noexcept {
-            volatile int sink = 0;
-            for (int k = 0; k < 50; ++k) {
-                sink += k;
-            }
-            static_cast<void>(sink);
             done.fetch_add(1, std::memory_order_relaxed);
         });
         if (child == nullptr || !fixture.system.schedule(child)) {
             break;
         }
+        ++scheduled;
     }
     PN_REQUIRE(fixture.system.schedule(root));
     fixture.system.wait(root);
 
+    PN_CHECK_EQ(done.load(std::memory_order_relaxed), scheduled);
+
     const JobSystem::Statistics stats = fixture.system.statistics();
-    PN_CHECK_GT(stats.executed, 0u);
-    PN_CHECK_GT(stats.stolen, 0u);
+    // Every job that ran is counted: the children, plus the root. Structural.
+    PN_CHECK_GE(stats.executed, static_cast<std::uint64_t>(scheduled + 1));
+
+    // stats.stolen and stats.steal_attempts are deliberately NOT asserted.
+    // They are read here only to keep them exercised, so a change that breaks
+    // the counters entirely still shows up as a compile or link failure.
+    static_cast<void>(stats.stolen);
+    static_cast<void>(stats.steal_attempts);
 }
 
 PN_TEST(job_system, repeated_start_stop_cycles_are_stable) {

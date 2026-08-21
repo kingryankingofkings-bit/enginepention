@@ -90,6 +90,45 @@ This one is invisible to ordinary testing - it produces a wrong parent pointer
 only under a precise interleaving - and was found by ThreadSanitizer, which
 reported the read against `allocate_job`'s write directly.
 
+**3. Three tests asserted scheduling outcomes rather than structural
+properties.** Not defects in the scheduler - defects in how it was tested, and
+worth as much space because they are the more insidious kind.
+
+Each had the same shape. The deque's contended-race test required that both the
+owner and a thief win at least once across 2000 rounds. The scheduler's
+steal test required the steal counter to be non-zero. And the test written to
+*replace* that one asserted `steal_attempts > 0`, with a comment confidently
+calling it structural.
+
+None of the three is a property of this code. Which thread wins a
+few-instruction race, whether a worker ever runs dry, whether a steal is even
+attempted - all are properties of the scheduler and the core count. On CI they
+failed in *both directions*: one configuration saw the thief win all 2000
+rounds, another saw the owner win all 2000, while the exactly-one-taker
+invariant held 2000 of 2000 in each. A real ordering bug cannot produce "always
+exactly one winner, but always the same one".
+
+**The rule that actually holds: assert what the caller can observe, never what
+the workers happened to do.**
+
+The concerns behind those assertions were legitimate - a test that never
+contends proves nothing, and a scheduler that silently degrades to
+single-threaded must be caught. Both are now met without depending on timing:
+
+- `last_item_taken_by_the_owner` and `last_item_taken_by_a_thief` drive the
+  contended compare-exchange branch down each side deterministically, with no
+  second thread at all.
+- `work_submitted_from_the_main_thread_is_reachable_by_workers` asserts
+  reachability rather than stealing. It deliberately does not call `wait()`,
+  because `wait()` executes work on the calling thread and would mask the very
+  defect it tests; the main thread spins on a flag with a deadline, so the job
+  can only complete if a worker reached it. Before defect 1 was fixed, this
+  never completed.
+
+CI now runs the whole suite a second time under `taskset -c 0`. A single core is
+the cheapest way to expose this class of defect, and it is the class most likely
+to pass on a developer machine and fail on a small runner.
+
 **A note on tool feedback.** TSan initially also reported the publication of the
 job payload as a race. That one traced to the deque using a standalone release
 fence plus a relaxed store, a formulation the standard makes equivalent to a
