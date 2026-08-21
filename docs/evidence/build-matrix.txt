@@ -1,56 +1,40 @@
-Build and test matrix - after the jobs module
-Captured: 2026-08-21T13:21:53Z
+Build and test matrix - hybrid Rust/C++ (ADR-0009)
+Captured: 2026-08-21T14:00:14Z
 
-gcc-debug                      100% tests passed, 0 tests failed out of 13
-gcc-release                    100% tests passed, 0 tests failed out of 13
-clang-debug                    100% tests passed, 0 tests failed out of 13
-clang-release                  100% tests passed, 0 tests failed out of 13
-gcc-no-exceptions              100% tests passed, 0 tests failed out of 13
-clang-no-exceptions            100% tests passed, 0 tests failed out of 13
-gcc-asan-ubsan                 100% tests passed, 0 tests failed out of 13
-clang-asan-ubsan               100% tests passed, 0 tests failed out of 13
-gcc-tsan                       100% tests passed, 0 tests failed out of 13
-clang-tsan                     100% tests passed, 0 tests failed out of 13
+gcc-debug                      rust=ON  100% tests passed, 0 tests failed out of 15
+gcc-release                    rust=ON  100% tests passed, 0 tests failed out of 15
+clang-debug                    rust=ON  100% tests passed, 0 tests failed out of 15
+clang-release                  rust=ON  100% tests passed, 0 tests failed out of 15
+gcc-no-exceptions              rust=ON  100% tests passed, 0 tests failed out of 15
+clang-no-exceptions            rust=ON  100% tests passed, 0 tests failed out of 15
+gcc-asan-ubsan                 rust=OFF 100% tests passed, 0 tests failed out of 14
+clang-asan-ubsan               rust=OFF 100% tests passed, 0 tests failed out of 14
+gcc-tsan                       rust=OFF 100% tests passed, 0 tests failed out of 14
+clang-tsan                     rust=OFF 100% tests passed, 0 tests failed out of 14
 
 --------------------------------------------------------------------------
-13 test binaries, 152 tests, 12,442 assertions, green in all ten
-configurations. Counted by running each binary, not by reading the source.
+15 tests registered in the six non-sanitizer configurations: 14 C++ binaries
+plus the Rust boundary suite (9 tests). 14 in the four sanitizer
+configurations, where the Rust half is deliberately skipped.
 
-Concurrency soak, after the fixes below: 48 further runs of the two jobs suites
-under ThreadSanitizer (both compilers) and AddressSanitizer. Zero failures, zero
-ThreadSanitizer warnings.
+Why Rust is skipped under sanitizers, stated rather than glossed: a sanitizer
+build instruments the C++ archives, and linking those into a Rust binary that
+was not instrumented the same way produces link errors or a binary whose runtime
+checks disagree with each other. Stable Rust has no matching sanitizer support.
+The C++ side - which owns all the threading - keeps full sanitizer coverage.
+What is NOT covered is the FFI boundary itself under a sanitizer. That is a real
+gap, and it is recorded here rather than left implicit.
 
-Findings from this run, all real and all fixed:
+The hybrid boundary (ADR-0009) is exercised by tests on both sides:
+  - engine/jobs/tests/c_api_test.cpp    - 7 tests, C ABI from C++
+  - rust/crates/pn-jobs/tests/boundary.rs - 9 tests, Rust closures on C++ workers
 
-[1] GCC REFUSES to compile std::atomic_thread_fence under -fsanitize=thread:
+Both assert the crossing frequency directly: a 50,000-element loop at grain 512
+crosses the boundary 98 times, not 50,000. If a change ever makes the boundary
+fine-grained, those tests fail loudly instead of quietly costing an order of
+magnitude.
 
-      error: 'atomic_thread_fence' is not supported with '-fsanitize=thread'
-
-    Not a warning - a hard error, so the gcc-tsan configuration could not build
-    at all. Combined with ThreadSanitizer's imprecise modelling of standalone
-    fences under Clang, this settled the question: the deque now expresses its
-    ordering with sequentially consistent operations rather than relaxed
-    operations around fences. Equivalent under the standard, buildable by both
-    compilers, and verifiable by both sanitizers.
-
-[2] A genuine data race in JobSystem::finish(), found by ThreadSanitizer and
-    reproducible on every run. It read job->parent AFTER decrementing the
-    completion counter to zero - but zero is exactly the signal that lets the
-    owning thread recycle that slot and overwrite the field. Fixed by reading
-    the parent before the decrement. Not findable by ordinary testing: it
-    produces a wrong pointer only under a precise interleaving.
-
-[3] A deque test failed under AddressSanitizer - not on its correctness
-    assertion, which passed 2000 of 2000 rounds, but on its own guard that both
-    the owner and a thief must actually win at least once. Under instrumentation
-    thread startup dominated the few-instruction window being tested, so the
-    race never occurred and the test was silently proving nothing. Fixed by
-    having both threads rendezvous immediately before the contended operation.
-    The guard was correct to fail; the test was not creating contention.
-
-Scope limit: these results cover math, core, platform, jobs, and the test
-framework. No graphics or renderer code exists, and no GPU is present on this
-host (BLOCK-002). Nothing here is evidence about rendering, and no figure here
-is a performance measurement. In particular, that the scheduler is CORRECT under
-concurrency is demonstrated; that it SCALES is not, and cannot be on a four-core
-host with no performance budget to measure against.
+Also verified: a panicking Rust chunk body is contained at the trampoline and
+reported as an error rather than unwinding into C++ frames, which would be
+undefined behaviour; remaining chunks still run; and the scheduler stays usable
+afterwards.

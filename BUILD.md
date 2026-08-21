@@ -8,7 +8,8 @@
 | Ninja | 1.11 | Or any CMake generator |
 | GCC | 13 | Must support `-std=c++23` |
 | Clang | 18 | Second supported compiler; both must build every commit |
-| Python | 3.10 | Repository tooling only. No Python is invoked by the engine at any point |
+| Python | 3.11 | Repository tooling only. No Python is invoked by the engine at any point |
+| Rust | 1.75 | Second implementation language ([ADR-0009](docs/adr/ADR-0009-hybrid-rust-cpp.md)). Optional: CMake reports `rust crates : OFF` and skips them if cargo is absent |
 
 For the sanitizer configurations under Clang you also need Clang's sanitizer
 runtime archives, packaged separately on most distributions:
@@ -60,6 +61,22 @@ done
 Plus, under each compiler: `-DPN_NO_EXCEPTIONS=ON`, `-DPN_SANITIZE_ADDRESS=ON`,
 and `-DPN_SANITIZE_THREAD=ON`.
 
+## The Rust half
+
+`cargo` is driven by CMake, never run directly. The crates link against static
+libraries CMake produces, and `build.rs` reads their location from
+`PN_NATIVE_LIB_DIR`; running `cargo` by hand fails with an explanation rather
+than an unresolved symbol.
+
+The workspace declares **zero** external dependencies, so cargo runs `--offline`
+and never touches the network. That is load-bearing rather than a convenience:
+an attempted download is itself a boundary violation and should fail the build.
+
+Rust is skipped automatically in the four sanitizer configurations. Instrumented
+C++ archives cannot be linked safely into an uninstrumented Rust binary, and
+stable Rust has no matching sanitizer support. The C++ side keeps full coverage;
+the FFI boundary under a sanitizer is a stated gap.
+
 ## Repository checks
 
 These enforce rules that erode instantly if left to convention. Both run in CI
@@ -67,8 +84,9 @@ and both are proven to fail on deliberate violations - see
 `docs/evidence/enforcement-checks.txt`.
 
 ```sh
-python3 build_scripts/check_authorship.py   # every source file names its requirement and ADR
-python3 build_scripts/check_layering.py     # dependency direction; graphics API confined to one module
+python3 build_scripts/check_authorship.py            # every source file names its requirement and ADR
+python3 build_scripts/check_layering.py              # dependency direction; graphics API confined to one module
+python3 build_scripts/check_no_crate_dependencies.py # no crates.io, git, or registry dependencies
 ```
 
 ## Running a subset of tests

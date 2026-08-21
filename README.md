@@ -1,7 +1,7 @@
 # Pention Engine
 
 A clean-room, custom-built, next-generation 3D sandbox / free-roam game engine
-and integrated editor, written in C++23.
+and integrated editor. **Hybrid C++23 and Rust**, targeting Vulkan.
 
 **Status: Phase 3 begun. A Tier A foundation builds and passes tests. There is
 no renderer, no editor, and no runtime.**
@@ -38,7 +38,7 @@ remaining 177 are `NOT_STARTED`. Nothing is `DEFERRED_BY_SCOPE`. See
 
 ## What builds and passes today
 
-152 tests across 13 binaries, 12,442 assertions, green in **10 build
+161 tests across 14 binaries plus a Rust suite, green in **10 build
 configurations** - GCC and Clang, Debug and Release, with exceptions disabled,
 and under ASan+UBSan and TSan. Reproduced from a fresh checkout on clean CI
 runners, not only on the machine it was written on.
@@ -49,11 +49,18 @@ runners, not only on the machine it was written on.
 | `engine/math` | `f64` world space and camera-relative `f32` render space as distinct types, column-major matrices, reversed-Z infinite projection |
 | `engine/core` | `pn::Expected` fallible-return type, allocation-free `Error`, generational handles, arena and pool allocators with tagged accounting |
 | `engine/platform` | Virtual memory with reserve and commit separated, thread abstraction, fixed-timestep accumulator |
-| `engine/jobs` | Bounded work-stealing deque and a job scheduler with dependencies, cancellation, and `parallel_for` |
+| `engine/jobs` | Bounded work-stealing deque and a job scheduler with dependencies, cancellation, and `parallel_for`, plus the C ABI that Rust uses |
+| `rust/crates/pn-jobs` | Safe Rust over the C++ scheduler - Rust closures running on C++ worker threads, with panics contained at the boundary |
 
 ```sh
 cmake -S . -B build -G Ninja && cmake --build build && ctest --test-dir build
 ```
+
+CMake drives cargo; do not run `cargo` directly, as the Rust crates link against
+libraries CMake produces. The Rust workspace declares **zero** external
+dependencies - crates.io is prohibited on the same terms as any other package
+manager, which is why the Vulkan bindings will be generated from the official
+Khronos registry rather than taken from `ash`.
 
 Full instructions: [BUILD.md](BUILD.md).
 

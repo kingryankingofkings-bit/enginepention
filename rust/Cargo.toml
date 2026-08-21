@@ -1,0 +1,27 @@
+# Pention Engine - Rust workspace
+# Requirement: PN-OBJ-017
+# Decision:    ADR-0009 (hybrid Rust/C++)
+#
+# No external dependencies, anywhere in this workspace. crates.io is prohibited
+# on the same terms as any other package manager - see DEPENDENCY_BOUNDARY.md.
+# Enforced by build_scripts/check_no_crate_dependencies.py.
+
+[workspace]
+resolver = "2"
+members = [
+    "crates/pn-jobs-sys",
+    "crates/pn-jobs",
+]
+
+[workspace.package]
+version = "0.0.1"
+edition = "2021"
+rust-version = "1.75"
+publish = false
+
+[profile.dev]
+opt-level = 1
+
+[profile.release]
+opt-level = 3
+debug = 1

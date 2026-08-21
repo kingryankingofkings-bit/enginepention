@@ -1,0 +1,12 @@
+# Requirement: PN-PLT-013, PN-OBJ-017
+# Decision:    ADR-0009
+
+[package]
+name = "pn-jobs"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+publish.workspace = true
+
+[dependencies]
+pn-jobs-sys = { path = "../pn-jobs-sys" }

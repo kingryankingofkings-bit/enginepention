@@ -20,6 +20,7 @@ implementation (§3.2, final paragraph).
 | GCC / libstdc++ | 13.3.0 | GPL-3.0 with GCC Runtime Library Exception | C++23 compiler and standard library | Runtime library only | §3.2 permits the language compiler, linker, and standard language runtime |
 | Clang / LLVM | 18.1.3 | Apache-2.0 with LLVM exception | Second supported compiler; sanitizers; static analysis | No | Same |
 | git | 2.43.0 | GPL-2.0 | Version control | No | Not part of the product |
+| Rust toolchain (rustc, cargo) | 1.94.1 | MIT / Apache-2.0 | Compiler and build driver for the Rust half of the hybrid ([ADR-0009](docs/adr/ADR-0009-hybrid-rust-cpp.md)) | Runtime library only | §3.2 permits the language compiler and standard runtime. `cargo` is used strictly as a build driver, exactly as CMake is |
 | Python | 3.11.15 | PSF-2.0 | Repository tooling only — authorship checks, CI helpers, evidence collation | No | Tooling scripts, never engine behaviour. No Python is invoked by the engine, editor, or runtime at any point |
 
 ### Operating system and platform APIs — permitted boundary
@@ -56,6 +57,28 @@ restated here: **a permissive license does not satisfy the custom-build
 requirement.** MIT, BSD, Apache, zlib, and public-domain implementation code are
 prohibited on the same terms as proprietary code. The constraint is on
 authorship, not on licensing.
+
+### crates.io is not an exception
+
+**No Rust crate dependencies. Zero.** §3.1 prohibits "package-manager
+dependencies" without qualifying which package manager, and cargo is one. The
+rule does not soften because the Rust ecosystem's convention is to reach for a
+crate.
+
+This has one consequence worth naming, because it contradicts advice this
+project was given. The `engine-architect` skill specifies **Vulkan via the `ash`
+crate**; `ash` is prohibited here. What is permitted instead is the official
+Khronos registry - `vk.xml` and the official headers - which §3.2 allows as an
+official graphics API specification, and which was retrieved successfully from
+this environment. Bindings are generated from that registry by a tool in this
+repository.
+
+The same reasoning excludes `winit`, `glam`, `rayon`, `serde`, `wgpu`,
+`tokio`, and every other crate that would supply engine behaviour. The Rust
+standard library is permitted as the language runtime, exactly as libstdc++ is.
+
+Enforced by `build_scripts/check_no_crate_dependencies.py`, which fails the
+build on any non-empty dependency table in any manifest.
 
 ### Testing
 

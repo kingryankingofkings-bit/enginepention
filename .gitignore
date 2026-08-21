@@ -26,6 +26,11 @@ compile_commands.json
 build.ninja
 rules.ninja
 
+# Rust build output. CARGO_TARGET_DIR is redirected into the CMake build
+# directory, but a stray `cargo build` run by hand lands here.
+/rust/target/
+rust-target/
+
 # Cooked content and derived data (regenerable by definition)
 /derived/
 /cooked/

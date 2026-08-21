@@ -44,6 +44,7 @@ endif()
 list(APPEND CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake")
 include(PentionCompilerSettings)
 include(PentionModule)
+include(PentionRust)
 
 # ---------------------------------------------------------------------------
 # Modules, in dependency order (ADR-0004)
@@ -61,6 +62,9 @@ add_subdirectory(engine/core)
 add_subdirectory(engine/platform)
 add_subdirectory(engine/jobs)
 
+# Rust crates sit above the C++ modules and link against them (ADR-0009).
+pn_configure_rust()
+
 # ---------------------------------------------------------------------------
 # Summary
 # ---------------------------------------------------------------------------
@@ -74,4 +78,5 @@ message(STATUS "  warnings->errors: ${PN_WARNINGS_AS_ERRORS}")
 message(STATUS "  no-exceptions   : ${PN_NO_EXCEPTIONS}")
 message(STATUS "  asan+ubsan      : ${PN_SANITIZE_ADDRESS}")
 message(STATUS "  tsan            : ${PN_SANITIZE_THREAD}")
+message(STATUS "  rust crates     : ${PN_RUST_ENABLED}")
 message(STATUS "")

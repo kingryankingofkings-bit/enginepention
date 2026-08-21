@@ -1,8 +1,22 @@
 # ADR-0001 — Implementation language, first graphics backend, build orchestration
 
-- **Status:** Accepted
+- **Status:** **Partially superseded** by [ADR-0009](ADR-0009-hybrid-rust-cpp.md), 2026-08-21
 - **Date:** 2026-08-21
 - **Resolves:** [CONF-001](../INSTRUCTION_CONFLICTS.md#conf-001--implementation-language-and-first-graphics-backend)
+
+> **What changed.** The user subsequently directed a hybrid: Rust for new work,
+> Vulkan as the graphics API, and the existing C++ retained. See
+> [ADR-0009](ADR-0009-hybrid-rust-cpp.md).
+>
+> **What still holds.** Everything in this record about the *existing* C++
+> modules, the two supported C++ compilers, warnings-as-errors, and the
+> single-graphics-API-module rule. The five C++ modules are not rewritten.
+>
+> **What no longer holds.** "C++23" as the sole implementation language, and
+> Direct3D 12 as the first graphics backend. Vulkan is now first, which has the
+> side effect of unblocking `BLOCK-004` ahead of `BLOCK-001`: a Vulkan backend
+> can at least be compiled on a Linux host once headers are present, where a
+> D3D12 one cannot be compiled here at all.
 
 ## Context
 

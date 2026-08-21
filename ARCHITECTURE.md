@@ -21,6 +21,33 @@ Asset cooking is deliberately out-of-process. Parsers consume untrusted input,
 and §13.13 requires an untrusted-asset policy; process isolation is the boundary
 that makes a parser crash recoverable rather than fatal.
 
+## 1a. Two languages, one boundary
+
+The engine is a hybrid: C++23 owns `testing`, `math`, `core`, `platform`, and
+`jobs` - all built and tested - and Rust owns new subsystems, starting with the
+Vulkan RHI. See [ADR-0009](docs/adr/ADR-0009-hybrid-rust-cpp.md).
+
+The design question in a hybrid is not *which* languages but *where the boundary
+sits*. A boundary crossed per element is fatal to performance; one crossed per
+subsystem operation costs nothing measurable. The contract is therefore:
+
+- **Coarse crossings only.** Once per operation, plus once per chunk for
+  parallel work - never once per element. Asserted by tests on both sides.
+- **Plain data only.** `#[repr(C)]` structs, primitives, and pointer+length
+  pairs. No templates, no generics, no `std::` or Rust vocabulary types.
+- **The allocating side frees.**
+- **Nothing unwinds across**, in either direction.
+- **One C header is the contract**, mirrored by a Rust `-sys` crate.
+
+Rust drives; C++ provides services. Crucially, **Rust does not start its own
+scheduler** - two schedulers would oversubscribe the cores and each would make
+the other's decisions wrong. Rust hands the C++ scheduler a count, a grain, one
+function pointer, and one context, and it fans the work out across the workers
+it already owns.
+
+`cargo` never runs on its own: CMake builds the native libraries first and then
+drives it, so there is one build entry point and one test gate.
+
 ## 2. Module boundaries and dependency direction
 
 See [ADR-0004](docs/adr/ADR-0004-module-boundaries.md). One CMake target per

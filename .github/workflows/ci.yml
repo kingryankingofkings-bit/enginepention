@@ -24,6 +24,8 @@ jobs:
         run: python3 build_scripts/check_authorship.py
       - name: Module layering and graphics-API confinement
         run: python3 build_scripts/check_layering.py
+      - name: No crates.io dependencies
+        run: python3 build_scripts/check_no_crate_dependencies.py
       - name: Source is ASCII-only
         run: |
           if LC_ALL=C grep -rPn '[^\x00-\x7F]' engine/ cmake/ build_scripts/ CMakeLists.txt 2>/dev/null; then
@@ -61,6 +63,12 @@ jobs:
           sudo apt-get install -y --no-install-recommends \
             ninja-build clang-18 libclang-rt-18-dev
           sudo update-alternatives --install /usr/bin/clang++ clang++ /usr/bin/clang++-18 100 || true
+
+      - name: Show Rust toolchain
+        # The Rust crates declare no dependencies, so cargo runs --offline and
+        # never touches the network. A runner without cargo simply skips them,
+        # which CMake reports at configure time rather than failing silently.
+        run: cargo --version || echo "cargo not present - Rust crates will be skipped"
 
       - name: Configure
         run: >

@@ -19,7 +19,9 @@ The authority order from §1 is:
 
 ## CONF-001 — Implementation language and first graphics backend
 
-**Status:** Resolved. See [ADR-0001](adr/ADR-0001-language-and-graphics-api.md).
+**Status:** Re-resolved by user direction, 2026-08-21. See
+[ADR-0009](adr/ADR-0009-hybrid-rust-cpp.md); the original resolution is
+[ADR-0001](adr/ADR-0001-language-and-graphics-api.md).
 
 | Source | Requirement |
 |---|---|
@@ -33,10 +35,28 @@ terms of an explicit-API RHI with a D3D12-first fallback matrix). The skill's
 clause is level 5 only, and §1 explicitly denies any skill the power to weaken
 levels 1–4.
 
-**Resolution:** The Master Execution Prompt governs. The engine is **C++23**,
-first backend **Direct3D 12**, second backend **Vulkan**, built with **CMake +
-Ninja**. The user's message designating the `.md` file as "your authoritative
-Grandmaster Prompt" independently confirms this ordering.
+**Original resolution (2026-08-21, superseded in part).** The Master Execution
+Prompt governs: C++23, Direct3D 12 first, Vulkan second, CMake + Ninja.
+
+**Current resolution (2026-08-21, by explicit user direction).** A hybrid. Rust
+for new subsystems, Vulkan as the graphics API, and the five existing C++
+modules retained rather than rewritten. Three options were put to the user with
+their costs - Rust-only, C++-only-with-Vulkan, and the hybrid - together with an
+explicit recommendation against the hybrid on the grounds of two toolchains and
+an FFI boundary through hot paths. The user chose the hybrid.
+
+This is a level-5 architecture preference under §1, and the user is the highest
+authority on it. The engineering objection is recorded in
+[ADR-0009](adr/ADR-0009-hybrid-rust-cpp.md) rather than relitigated, and that
+record is mostly about engineering the objection away: the FFI boundary is
+contractually coarse, so it does not sit in a hot path.
+
+**One thing the user's direction cannot change**, because it sits at level 2 and
+not level 5: the `engine-architect` skill's "Vulkan via the `ash` crate" remains
+prohibited. `ash` is a package-manager dependency, and
+[DEPENDENCY_BOUNDARY.md](../DEPENDENCY_BOUNDARY.md) prohibits those on the same
+terms whether the package manager is cargo or vcpkg. Vulkan bindings are
+generated from the official Khronos registry instead, which §3.2 permits.
 
 **What is NOT discarded.** The skill's *language-neutral* engineering content
 does not conflict with the prompt and is adopted in full, because it constitutes
