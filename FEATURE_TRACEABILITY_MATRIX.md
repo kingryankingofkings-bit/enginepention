@@ -22,7 +22,7 @@ requirement rather than rounded up.
 
 ## Test totals, as counted from the built binaries
 
-338 registered C++ tests across 22 binaries, executing 4,806,309 assertions,
+356 registered C++ tests across 23 binaries, executing 4,815,721 assertions,
 plus 145 Rust tests across 11 suites. All pass.
 
 The assertion count is dominated by four binaries that assert per sample
@@ -69,13 +69,14 @@ was written on.
 | `pn_test_core_console` | 27 | 1,639 |
 | `pn_test_core_log` | 20 | 63 |
 | `pn_test_scene_world` | 24 | 1,971,837 |
+| `pn_test_scene_serialize` | 18 | 9,412 |
 | `pn_test_platform_virtual_memory` | 12 | 56 |
 | `pn_test_platform_clock` | 13 | 2,036 |
 | `pn_test_platform_thread` | 4 | 4 |
 | `pn_test_jobs_deque` | 10 | 8,154 |
 | `pn_test_jobs_job_system` | 17 | 1,548 |
 | `pn_test_jobs_c_api` | 7 | 23 |
-| **Total** | **338** | **4,806,309** |
+| **Total** | **356** | **4,815,721** |
 
 The Rust workspace reports pass/fail per test rather than per assertion, so its
 tests are counted separately rather than folded into a total that would mean two
@@ -116,6 +117,7 @@ warnings.
 | PN-PLT-016 | Logging, structured events, assertions with categories and levels | `engine/core/include/pn/core/{log,assert}.hpp`, `engine/core/src/log.cpp` | `log_test.cpp` (20 tests) | Both clauses. **Log capture:** a capturing sink receives level, category, message, structured fields and source location, and copies every string out of the record because the views in one point at the caller's stack. Per-category thresholds, records suppressed below a threshold without evaluating their arguments, and 800 records from four threads all arriving with the dispatch TSan-clean. **Assertion fires with source location:** the handler is now replaceable, which is what made this testable at all - an assertion that only ever aborts cannot be observed by the process it aborts - and is what a crash reporter needs anyway. The expression, message, file and line are asserted exactly. Both compile-time gates have a test of their own where they are turned off and the *absence* of an effect is checked |
 | PN-OBJ-001 | Data-oriented entity/component storage with stable handles | `engine/scene/include/pn/scene/world.hpp` | `world_test.cpp` (24 tests, 1,971,837 checks) | Both clauses. **Randomized churn:** 120,000 create/add/remove/destroy/query operations against a reference model, compared after each one, then a final sweep over *every handle ever issued* - live or not - asserting each resolves exactly as the model says. **Handles never alias:** a destroyed handle and the entity that takes its slot share an index and differ in generation; the old handle is not alive and resolves to no component even after the new entity is given one. A default-constructed handle is refused at index zero, because slot generations start at one. Components of one type are contiguous, and destroying an entity clears it from every storage |
 | PN-OBJ-002 | Archetype or equivalent query acceleration | `engine/scene/include/pn/scene/world.hpp` | `world_test.cpp` (24 tests, 1,971,837 checks) | The criterion is a cost statement, so it is checked as an operation count rather than a duration: a duration would be a property of the machine that ran it and could not be reported as a result. A query is driven by whichever named storage is **smallest**, chosen at run time, and the world reports how many entities the last query examined. **Cost independent of the total:** a fixed match set of 50 entities is held while the world grows from 100 to 100,000 entities around it - the matches scattered through the large storage rather than appended to it - and the examined count stays at 50 in every case and in either naming order. With three storages of 1,000 / 100 / 10, the smallest drives even when it is named second of three, so neither "keep the first" nor "keep the last" produces the answer. **The acceleration does not change the answer:** 20,000 churn operations over three populations of shifting relative size, with the query compared after every batch against a brute-force scan of every live entity, and the examined count asserted equal to the smaller population at whatever size relationship the churn has produced. Five defects were introduced deliberately and each was caught - `docs/evidence/enforcement-checks.txt`. This is **not** an archetype table: entities are not grouped by their exact component set, so a query still tests membership per candidate. It satisfies the criterion as written, with considerably less machinery, and the header says so rather than letting the requirement's title imply otherwise |
+| PN-PLT-021 | Object identity and reference repair across load | `engine/scene/include/pn/scene/{serialize,world}.hpp` | `serialize_test.cpp` (18 tests, 9,412 checks) | Both clauses. An entity now carries a **persistent id** distinct from its handle: assigned once, never reused when a slot is, and cleared on destroy, so a saved reference to a destroyed object cannot resolve to whatever later occupies its slot. **Cross-referencing objects survive save/load:** references inside components are written as an ordinal into the file's own entity table rather than as a raw handle - both halves of a handle are meaningless in the world that reads them - and a world built by 4,000 random churn operations is round-tripped with *every* reference in it compared, by identity, against what it pointed at before, with both outcomes asserted to occur: references repaired, and references whose target had died correctly dropped. **And rename:** the target is renamed once before the save and once after the load, and the reference is unmoved by either, because it was never keyed on the name. A stale handle whose slot has since been reused by a live entity is arranged deliberately and asserted to come back as nothing rather than as the replacement. The file is deterministic in the strong sense - two worlds holding the same content write identical bytes whatever edit history produced them, and registration order does not change it - and every single-byte corruption of a saved file, at every offset, is rejected. Six defects were introduced deliberately; five were caught and the sixth exposed a hole in the test, which is recorded along with the test that replaced it - `docs/evidence/enforcement-checks.txt` |
 
 ## Partially verified
 

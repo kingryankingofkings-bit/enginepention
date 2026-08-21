@@ -35,7 +35,7 @@ to that requirement — never an interface, a stub, or a passing compile.
 `DEFERRED_BY_SCOPE` is used only after the full inventory records why the item
 sits outside the agreed release tier, and never to hide skipped work.
 
-**Current status: 12 `VERIFIED`, 17 `IMPLEMENTED_UNVERIFIED`, 18 `BLOCKED`, 167
+**Current status: 13 `VERIFIED`, 17 `IMPLEMENTED_UNVERIFIED`, 18 `BLOCKED`, 166
 `NOT_STARTED`, of 214.** These four numbers had drifted from the table below -
 they were last correct several increments ago, and every commit since moved a
 row without moving the summary. `build_scripts/check_status_counts.py` now
@@ -78,7 +78,7 @@ Tiers are cumulative (§6).
 | PN-PLT-018 | Module boundaries, stable internal APIs, versioning, capability discovery | A | — | CI dependency-direction check fails on a violating include | IMPLEMENTED_UNVERIFIED |
 | PN-PLT-019 | Configuration, console variables, command execution | A | PN-PLT-010 | CVar set/get/persist round-trip; command parse errors are actionable | VERIFIED |
 | PN-PLT-020 | Deterministic serialization with schema migration | A | PN-PLT-009 | Golden-data test; old-version payload migrates and round-trips | VERIFIED |
-| PN-PLT-021 | Object identity and reference repair across load | A | PN-PLT-020 | Cross-referencing objects survive save/load and rename | NOT_STARTED |
+| PN-PLT-021 | Object identity and reference repair across load | A | PN-PLT-020 | Cross-referencing objects survive save/load and rename | VERIFIED |
 | PN-PLT-022 | Undo/redo transactions and snapshots | A | PN-PLT-020 | Randomized op/undo/redo sequence returns to the exact initial state | NOT_STARTED |
 | PN-PLT-023 | Save-game foundations built on the serialization core | B | PN-PLT-021 | Save/reload across a world mutation preserves state | NOT_STARTED |
 | PN-PLT-024 | In-project reflection and metadata generation | A | PN-PLT-010 | Reflected type round-trips through serializer and inspector without hand-written glue | NOT_STARTED |

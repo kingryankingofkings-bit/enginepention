@@ -349,3 +349,67 @@ drifts for the same reason and is checked against the same table.
 === Against the catalog as committed ===
   Requirement status summary matches the table (214 requirements)
   exit=0
+
+================================================================================
+Scene identity and reference repair, verified against its defects, 2026-08-21
+================================================================================
+
+Six defects, each introduced alone. Five were caught. The sixth was not, and
+that is the useful result on this list.
+
+=== A saved reference not checked for aliveness ===
+The failure the whole mechanism exists to prevent. A component still holding a
+handle to a destroyed entity, whose slot has since been reused, maps through the
+slot index to the *replacement* entity's ordinal. The file then contains exactly
+the aliasing the generational handle prevents, laundered through a save, and
+nothing about the file or the load reports it.
+  FAILED: 17 tests, 7885 checks, 2 failures
+
+=== Component types written in registration order rather than sorted ===
+Which module registers a component type first changes with build configuration.
+The console's config file had this same hole one increment earlier.
+  FAILED: 17 tests, 9151 checks, 1 failure
+
+=== Identities not erased from the lookup index on destroy ===
+A destroyed object's id would still resolve, to a slot now holding a different
+object.
+  FAILED: 17 tests, 9225 checks, 1 failure
+
+=== The id counter not advanced past a restored identity ===
+A loader creates entities with the ids the file names. Left alone, the next
+entity created after a load is handed an id the file already used.
+  FAILED: 17 tests, 9225 checks, 1 failure
+
+=== An unknown component type refused rather than skipped ===
+Each type's block carries its length so a reader can step over a type it does
+not know. Removing that turns a scene saved by a build with one more component
+type from "loads without it" into "does not load".
+  FAILED: 17 tests, 9222 checks, 1 failure
+
+=== Component records written in storage order rather than sorted by ordinal ===
+  PASSED: 17 tests, 9225 checks, 0 failures
+
+That last one is a failure of the test, not of the code, and it is the second
+time this project has found one this way. The byte-for-byte round-trip test
+compared a world against its own reload - and the reload inserts components in
+the order the file lists them, so it inherits the same storage order the save
+was written from. Both sides moved together and the comparison held.
+
+The property that actually needs holding is that the file is a function of the
+world's *content*, not of the edit history that produced it. Two worlds are now
+built with the same entities, the same identities and the same components, one
+of them having had a component removed and re-added - which moves that entity to
+the end of the dense array and changes nothing else - and their files are
+compared. Re-checked with the record sort removed:
+
+  FAIL two_worlds_with_the_same_content_write_the_same_file (1 of 84 checks failed, aborted)
+  FAILED: 18 tests, 9309 checks, 1 failure
+
+And restored:
+
+  PASSED: 18 tests, 9412 checks, 0 failures
+
+Separately, every single-byte corruption of a saved scene - each offset in turn,
+one byte flipped - is asserted to be rejected rather than loaded. That is a
+property of the framing from PN-PLT-020 rather than of this increment, but it is
+worth asserting at the level a caller actually uses.

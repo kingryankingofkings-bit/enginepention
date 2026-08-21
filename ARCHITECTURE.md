@@ -162,6 +162,28 @@ a dependency graph gives incremental, parallel, deterministic cooking
 (PN-AST-002, PN-AST-003). Container formats are original, versioned,
 bounds-checked, and checksummed (PN-AST-004).
 
+### 9a. Entity identity across a save
+
+An entity handle names a *slot*. Both halves of it - the index and the
+generation - are meaningless in a world that did not issue it, so a handle
+written verbatim into a file comes back pointing at whatever now occupies that
+slot, or at nothing, and neither outcome announces itself. Entities therefore
+carry a **persistent id** distinct from their handle: assigned once, never
+reused when a slot is, and cleared on destroy (PN-PLT-021).
+
+References *inside* a saved scene are written as an ordinal into the file's own
+entity table rather than as an id, because within one file the table is the
+authority and an ordinal is smaller; the ids are what let a loaded object be
+matched to the object it was. A reference whose target is not in the save set -
+destroyed, or belonging to another world - is dropped rather than preserved: a
+dangling reference that resolves to *something* is worse than one that resolves
+to nothing.
+
+Persistent ids are unique within one world, because they come from a per-world
+counter. Merging saved scenes into one world (PN-OBJ-007) needs an identity that
+is unique across worlds and does not have one yet, so a load into a populated
+world is refused rather than merged.
+
 ## 10. World partition, streaming, persistence
 
 A hierarchical spatial index over `f64` world space (PN-WLD-004). Cells stream

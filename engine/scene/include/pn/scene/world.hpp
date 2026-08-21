@@ -1,6 +1,7 @@
 // Pention Engine - scene/world.hpp
 // Requirement: PN-OBJ-001 (data-oriented entity/component storage with stable
-//              handles)
+//              handles), PN-OBJ-002 (query acceleration),
+//              PN-PLT-021 (object identity across load)
 // Decision:    ADR-0004
 
 #ifndef PN_SCENE_WORLD_HPP
@@ -8,6 +9,7 @@
 
 #include "pn/core/assert.hpp"
 #include "pn/core/handle.hpp"
+#include "pn/core/hash_map.hpp"
 #include "pn/core/sparse_set.hpp"
 
 #include <cstddef>
@@ -33,6 +35,24 @@ struct EntityTag {};
 using Entity = core::Handle<EntityTag>;
 
 using ComponentId = std::uint32_t;
+
+/// An entity's identity, as distinct from its handle.
+///
+/// A handle names a *slot*: it is small, it is what systems pass around, and it
+/// is meaningless outside the world that issued it - the same slot index means
+/// a different entity in a world built a different way. A persistent id names
+/// the *object*: it is assigned once, never reused, and is what a saved file
+/// records so that a reference written on one run can be resolved on the next.
+///
+/// Unique within one world. Two worlds each assign from one, so ids from
+/// different worlds collide; merging saved scenes into one world (PN-OBJ-007)
+/// needs an identity wider than a per-world counter and does not have one yet.
+/// Saying so is cheaper than a subscene silently overwriting its parent.
+using PersistentId = std::uint64_t;
+
+/// The identity no entity has. Written into a saved reference that pointed
+/// outside the save set.
+inline constexpr PersistentId kNoPersistentId = 0;
 
 namespace detail {
 
@@ -76,18 +96,62 @@ public:
     World& operator=(World&&) noexcept = default;
 
     /// Creates an entity, reusing a freed slot when there is one.
-    Entity create() {
+    Entity create() { return create_with_id(next_persistent_id_); }
+
+    /// Creates an entity carrying a specified identity.
+    ///
+    /// For a loader restoring a saved scene, which must reproduce the ids the
+    /// file records rather than mint new ones - otherwise a reference saved
+    /// against an id resolves to nothing. Returns an invalid handle if the id
+    /// is zero or already in use, because silently renumbering the entity would
+    /// break exactly the references this exists to preserve.
+    Entity create_with_id(PersistentId id) {
+        if (id == kNoPersistentId || by_persistent_id_.contains(id)) {
+            return Entity{};
+        }
+
+        std::uint32_t index = 0;
         if (!free_list_.empty()) {
-            const std::uint32_t index = free_list_.back();
+            index = free_list_.back();
             free_list_.pop_back();
             slots_[index].alive = true;
-            ++live_count_;
-            return Entity{index, slots_[index].generation};
+        } else {
+            slots_.push_back(Slot{1, true});
+            persistent_ids_.push_back(kNoPersistentId);
+            index = static_cast<std::uint32_t>(slots_.size() - 1);
         }
-        slots_.push_back(Slot{1, true});
+
+        persistent_ids_[index] = id;
+        by_persistent_id_.insert(id, index);
+        // Never handed out twice, whether it was minted here or restored from a
+        // file: a load that brought in id 900 must not let the next create()
+        // mint 3 and then 900 again.
+        if (id >= next_persistent_id_) {
+            next_persistent_id_ = id + 1;
+        }
         ++live_count_;
-        return Entity{static_cast<std::uint32_t>(slots_.size() - 1), 1};
+        return Entity{index, slots_[index].generation};
     }
+
+    /// The identity of `entity`, or [`kNoPersistentId`] if it is not alive.
+    PersistentId persistent_id(Entity entity) const noexcept {
+        return alive(entity) ? persistent_ids_[entity.index()] : kNoPersistentId;
+    }
+
+    /// The entity carrying `id`, or an invalid handle if none does.
+    ///
+    /// The direction a loader needs: a file stores identities, and every
+    /// reference in it has to become a handle.
+    Entity find_by_persistent_id(PersistentId id) const noexcept {
+        const std::uint32_t* index = by_persistent_id_.find(id);
+        if (index == nullptr) {
+            return Entity{};
+        }
+        return Entity{*index, slots_[*index].generation};
+    }
+
+    /// The id the next [`create`] will assign. For tests and for diagnostics.
+    PersistentId next_persistent_id() const noexcept { return next_persistent_id_; }
 
     /// True if the handle refers to an entity that still exists.
     bool alive(Entity entity) const noexcept {
@@ -113,6 +177,10 @@ public:
             }
         }
         slots_[index].alive = false;
+        by_persistent_id_.erase(persistent_ids_[index]);
+        // Cleared rather than left behind, so a slot between destroy and reuse
+        // does not report the identity of the object that has gone.
+        persistent_ids_[index] = kNoPersistentId;
         // Bumping on destroy is what invalidates every outstanding handle to
         // this slot before the slot can be handed out again.
         ++slots_[index].generation;
@@ -198,6 +266,39 @@ public:
             return {};
         }
         return std::span<T>{storage->set.values(), storage->set.size()};
+    }
+
+    /// Visits every live entity, in slot-index order.
+    ///
+    /// The order is the world's own, not an insertion order, and it is what
+    /// makes a save deterministic: the same set of live entities enumerates the
+    /// same way regardless of the sequence of creates and destroys that
+    /// produced it.
+    template <typename Visitor>
+    void for_each_entity(Visitor&& visit) const {
+        for (std::size_t index = 0; index < slots_.size(); ++index) {
+            if (slots_[index].alive) {
+                visit(Entity{static_cast<std::uint32_t>(index), slots_[index].generation});
+            }
+        }
+    }
+
+    /// Visits every entity holding a `T`, with the component, in storage order.
+    ///
+    /// Read-only, and does not touch the query statistics: this is enumeration,
+    /// not a query, and a save walking every component type should not look
+    /// like the last thing a system asked for.
+    template <typename T, typename Visitor>
+    void for_each_component(Visitor&& visit) const {
+        const Storage<T>* storage = find_storage<T>();
+        if (storage == nullptr) {
+            return;
+        }
+        const core::SparseSet<T>& set = storage->set;
+        for (std::size_t position = 0; position < set.size(); ++position) {
+            const std::uint32_t index = set.key_at(position);
+            visit(Entity{index, slots_[index].generation}, set.values()[position]);
+        }
     }
 
     /// What the last query did. For diagnostics and for tests.
@@ -356,6 +457,12 @@ private:
     }
 
     std::vector<Slot> slots_;
+    /// Parallel to `slots_`. A separate array rather than a member of `Slot`
+    /// because `alive` and `generation` are read by every handle validation and
+    /// the identity is read only by save, load, and lookup.
+    std::vector<PersistentId> persistent_ids_;
+    core::HashMap<PersistentId, std::uint32_t> by_persistent_id_;
+    PersistentId next_persistent_id_ = 1;
     std::vector<std::uint32_t> free_list_;
     /// Indexed by component id. Mutable because `find_storage` is used from
     /// const accessors and only reads.
