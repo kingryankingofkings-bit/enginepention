@@ -171,3 +171,38 @@ representation.
 
 === With all three restored ===
   PASSED: 23 tests, 120089 checks, 0 failures
+
+================================================================================
+Console tests, and a gap the check itself found, 2026-08-21
+================================================================================
+
+Three properties removed in turn. The third is the interesting one.
+
+=== The name index appended to instead of rebuilt ===
+Every key in the index is a string_view into a string the backing vector owns,
+so a reallocation dangles all of them at once.
+  Debug:  Segmentation fault (exit 139)
+  ASan:   ERROR: AddressSanitizer: heap-use-after-free
+
+=== Every persistable variable written, not only changed ones ===
+  FAILED: 26 tests, 1631 checks, 1 failure
+
+=== The config sort removed ===
+  PASSED: 26 tests, 1631 checks, 0 failures
+
+That third result is a failure of the test, not of the code. The order-stability
+test built both consoles through the same helper and varied only the order of
+the *assignments*, so both vectors were in the same order and an unsorted file
+came out identical either way. The property that matters is that the order
+depends only on the names - registration order is what actually varies in
+practice, since which module registers first changes with build configuration
+and with which plugins are present.
+
+Rewritten to register the same variables in different orders and to assert the
+exact expected file. Re-checked with the sort removed:
+
+  FAILED: 27 tests, 1639 checks, 1 failure
+
+And restored:
+
+  PASSED: 27 tests, 1639 checks, 0 failures

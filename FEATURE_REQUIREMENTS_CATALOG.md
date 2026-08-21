@@ -72,7 +72,7 @@ Tiers are cumulative (§6).
 | PN-PLT-016 | Logging, structured events, assertions with categories and levels | A | — | Log capture in tests; assertion fires with source location | NOT_STARTED |
 | PN-PLT-017 | Crash capture, minidump integration, error reporting, recovery boundary | A | PN-PLT-016 | Induced fault produces a usable dump on the target platform | BLOCKED (`BLOCK-001` for the Windows dump path) |
 | PN-PLT-018 | Module boundaries, stable internal APIs, versioning, capability discovery | A | — | CI dependency-direction check fails on a violating include | IMPLEMENTED_UNVERIFIED |
-| PN-PLT-019 | Configuration, console variables, command execution | A | PN-PLT-010 | CVar set/get/persist round-trip; command parse errors are actionable | NOT_STARTED |
+| PN-PLT-019 | Configuration, console variables, command execution | A | PN-PLT-010 | CVar set/get/persist round-trip; command parse errors are actionable | VERIFIED |
 | PN-PLT-020 | Deterministic serialization with schema migration | A | PN-PLT-009 | Golden-data test; old-version payload migrates and round-trips | VERIFIED |
 | PN-PLT-021 | Object identity and reference repair across load | A | PN-PLT-020 | Cross-referencing objects survive save/load and rename | NOT_STARTED |
 | PN-PLT-022 | Undo/redo transactions and snapshots | A | PN-PLT-020 | Randomized op/undo/redo sequence returns to the exact initial state | NOT_STARTED |
