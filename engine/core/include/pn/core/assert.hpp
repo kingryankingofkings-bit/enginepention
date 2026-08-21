@@ -64,9 +64,17 @@ namespace pn::core {
 // The expression is still parsed and type-checked, but not evaluated: an
 // assertion that stops compiling in Release is an assertion that will be found
 // broken by the release build rather than by the developer who wrote it.
-#  define PN_ASSERT(expression_) (void(sizeof(bool((expression_)))))
+//
+// The `? 1 : 0` rather than a `bool(...)` cast is not a style choice. A cast to
+// bool on an expression that is already bool is a useless cast, which this
+// project builds with as an error. The first version used the cast and was
+// latent for a commit: every user was a member of a class template, where the
+// expression is dependent and the diagnostic waits for instantiation. The first
+// non-template caller surfaced it immediately. A ternary asks for the same
+// contextual conversion to bool and casts nothing.
+#  define PN_ASSERT(expression_) (void(sizeof((expression_) ? 1 : 0)))
 #  define PN_ASSERT_MSG(expression_, message_) \
-      (void(sizeof(bool((expression_)))), void(sizeof(message_)))
+      (void(sizeof((expression_) ? 1 : 0)), void(sizeof(message_)))
 #endif
 
 #endif  // PN_CORE_ASSERT_HPP

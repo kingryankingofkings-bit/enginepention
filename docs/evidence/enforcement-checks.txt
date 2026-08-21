@@ -88,3 +88,30 @@ With the fix restored:
 Note the check count: the property test aborts early on the defect, so the run
 that "only" executed 119,122 checks is the broken one. A count alone is not a
 result.
+
+================================================================================
+Collection property tests, verified to fail on the defects they name, 2026-08-21
+================================================================================
+
+The sparse set, ring buffer and bit set all passed on the first run. That is not
+evidence the tests work; it is evidence they did not fail. Each container's
+characteristic defect was introduced in turn and the suite re-run.
+
+=== SparseSet: the sparse index of the moved element is not repaired ===
+The classic sparse-set bug. Removal swaps the last element into the hole, and
+its entry in the sparse index must be updated to the new slot.
+  FAILED: 21 tests, 632083 checks, 2 failures
+
+=== BitSet: trailing bits past the size are not cleared ===
+count(), any() and find_next() read whole words, so a set of 65 bits would
+report 128 after set_all().
+  FAILED: 21 tests, 1066347 checks, 2 failures
+
+=== RingBuffer: the head advances without wrapping ===
+  FAILED: 21 tests, 466653 checks, 2 failures
+
+=== With all three restored ===
+  PASSED: 21 tests, 1066347 checks, 0 failures
+
+Note the check counts again: two of the broken runs abort early, so a lower
+count is the failing run. The count alone is not a result.
