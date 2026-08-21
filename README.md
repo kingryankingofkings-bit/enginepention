@@ -31,14 +31,14 @@ is on authorship, not on licensing.
 | 3 - Toolchain bootstrap and Tier A core | In progress |
 | 4-9 | Not started |
 
-Of 214 catalogued requirements: **3 are `VERIFIED`**, 7 are
+Of 214 catalogued requirements: **5 are `VERIFIED`**, 14 are
 `IMPLEMENTED_UNVERIFIED`, 18 are `BLOCKED` by this environment, and the
-remaining 186 are `NOT_STARTED`. Nothing is `DEFERRED_BY_SCOPE`. See
+remaining 177 are `NOT_STARTED`. Nothing is `DEFERRED_BY_SCOPE`. See
 [FEATURE_TRACEABILITY_MATRIX.md](FEATURE_TRACEABILITY_MATRIX.md).
 
 ## What builds and passes today
 
-62 tests across 7 binaries, 274 assertions, green in **10 build
+152 tests across 13 binaries, 12,442 assertions, green in **10 build
 configurations** - GCC and Clang, Debug and Release, with exceptions disabled,
 and under ASan+UBSan and TSan. Reproduced from a fresh checkout on clean CI
 runners, not only on the machine it was written on.
@@ -47,7 +47,9 @@ runners, not only on the machine it was written on.
 |---|---|
 | `engine/testing` | The in-project test framework, which verifies its own failure reporting |
 | `engine/math` | `f64` world space and camera-relative `f32` render space as distinct types, column-major matrices, reversed-Z infinite projection |
-| `engine/core` | `pn::Expected` fallible-return type, allocation-free `Error`, generational handle pool |
+| `engine/core` | `pn::Expected` fallible-return type, allocation-free `Error`, generational handles, arena and pool allocators with tagged accounting |
+| `engine/platform` | Virtual memory with reserve and commit separated, thread abstraction, fixed-timestep accumulator |
+| `engine/jobs` | Bounded work-stealing deque and a job scheduler with dependencies, cancellation, and `parallel_for` |
 
 ```sh
 cmake -S . -B build -G Ninja && cmake --build build && ctest --test-dir build

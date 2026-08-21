@@ -5,15 +5,21 @@ tests, and the evidence supporting its current state.
 
 **A requirement is `VERIFIED` only when executable behaviour plus its assigned
 acceptance evidence both exist.** An interface, a stub, a passing compile, or a
-design document is not evidence. Every other requirement in
-[FEATURE_REQUIREMENTS_CATALOG.md](FEATURE_REQUIREMENTS_CATALOG.md) - 208 of the
-214 - remains `NOT_STARTED` or `BLOCKED` and is absent from this file, which is
-the intended reading: this table is short because the project is young.
+design document is not evidence.
+
+Current totals: **5 `VERIFIED`**, 14 `IMPLEMENTED_UNVERIFIED`, 18 `BLOCKED`,
+177 `NOT_STARTED`, of 214. Nothing is `DEFERRED_BY_SCOPE`.
+
+Several entries below are `IMPLEMENTED_UNVERIFIED` despite substantial passing
+tests, because their acceptance criteria are not fully met - most often because
+the criterion names something this environment cannot exercise, such as scaling
+with core count or the absence of visible stutter. Those gaps are stated per
+requirement rather than rounded up.
 
 ## Test totals, as counted from the built binaries
 
-62 registered tests across 7 binaries, executing 274 assertions, all passing in
-each of 10 build configurations. Counted by running each binary rather than by
+152 registered tests across 13 binaries, executing 12,442 assertions, all
+passing in each of 10 build configurations. Counted by running each binary rather than by
 reading the source, because a test that fails to register is invisible to a
 source count.
 
@@ -31,14 +37,24 @@ was written on.
 
 | Binary | Tests | Checks |
 |---|---|---|
-| `pn_test_testing_self` | 9 | 26 |
-| `pn_test_core_expected` | 17 | 51 |
-| `pn_test_core_handle` | 10 | 105 |
+| `pn_test_testing_self` | 16 | 49 |
 | `pn_test_math_vector` | 7 | 18 |
 | `pn_test_math_matrix` | 7 | 32 |
-| `pn_test_math_convention` | 6 | 13 |
-| `pn_test_math_precision` | 6 | 29 |
-| **Total** | **62** | **274** |
+| `pn_test_math_convention` | 6 | 29 |
+| `pn_test_math_precision` | 6 | 13 |
+| `pn_test_core_expected` | 17 | 51 |
+| `pn_test_core_handle` | 10 | 105 |
+| `pn_test_core_memory` | 30 | 365 |
+| `pn_test_platform_virtual_memory` | 12 | 56 |
+| `pn_test_platform_clock` | 13 | 2,036 |
+| `pn_test_platform_thread` | 4 | 4 |
+| `pn_test_jobs_deque` | 8 | 8,140 |
+| `pn_test_jobs_job_system` | 16 | 1,544 |
+| **Total** | **152** | **12,442** |
+
+Concurrency soak beyond the matrix: 48 further runs of the two jobs suites under
+ThreadSanitizer (both compilers) and AddressSanitizer, zero failures and zero
+warnings.
 
 ## Verified
 
@@ -47,6 +63,8 @@ was written on.
 | PN-PLT-026 | In-project unit test framework | `engine/testing/` | `engine/testing/tests/self_test.cpp` (9 tests) | Framework self-tests assert that failing checks are recorded, that a failed `PN_REQUIRE` aborts the body while a failed `PN_CHECK` does not, and that a genuine failure exits non-zero. `docs/evidence/build-matrix.txt` |
 | PN-PLT-027 | `Expected`-based fallible-return convention, exception-independent | `engine/core/include/pn/core/{error,expected}.hpp` | `engine/core/tests/expected_test.cpp` (17 tests) | Passes under GCC and Clang, Debug and Release, **and with `-fno-exceptions`** under both compilers, and under ASan+UBSan and TSan. `static_assert` pins trivial destructibility for trivial payloads. `docs/evidence/build-matrix.txt` |
 | PN-PLT-011 | Generational handles that detect stale access | `engine/core/include/pn/core/handle.hpp` | `engine/core/tests/handle_test.cpp` (10 tests) | A recycled slot is proven to invalidate the prior handle rather than alias it; double-free is reported rather than ignored; never-issued, out-of-range, freed, and stale are distinguished by error category |
+| PN-PLT-006 | Tagged allocators, arenas, pools, alignment | `engine/core/include/pn/core/memory.hpp` | `engine/core/tests/memory_test.cpp` (30 tests) | Alignment honoured from a deliberately misaligned cursor across five alignments; padding cannot overrun the end; marker rewind exact; pool refuses an interior or foreign pointer rather than corrupting its free list; full allocate/free/reallocate cycle returns every block |
+| PN-PLT-008 | Out-of-memory handling with defined recovery | `engine/core/include/pn/core/memory.hpp` | `engine/core/tests/memory_test.cpp` | Exhaustion returns `out_of_memory` rather than aborting, and the allocator remains usable and uncorrupted afterwards - asserted, not assumed |
 
 ## Partially verified
 
@@ -58,7 +76,14 @@ was written on.
 | PN-PLT-018 | Module boundaries and dependency direction | `IMPLEMENTED_UNVERIFIED` | `build_scripts/check_layering.py` enforces the dependency graph and the single-graphics-API rule, and is **proven to fail** on deliberate violations. `docs/evidence/enforcement-checks.txt` | Only three modules exist, so the graph is barely exercised. The rule matters most at modules that do not yet exist |
 | PN-OPS-001 | Build configurations | `IMPLEMENTED_UNVERIFIED` | Debug and Release under both compilers, plus no-exceptions and two sanitizer configurations - 10 in total, all green locally and on clean CI runners | The editor, server, profile, and shipping configurations do not exist because the code they would configure does not exist |
 | PN-OPS-002 | Incremental and clean builds, toolchain lockfile, build cache policy | `IMPLEMENTED_UNVERIFIED` | A clean build from a fresh checkout succeeds on CI, which is one of this requirement's four parts | No toolchain lockfile, no declared build cache policy, and no generated-code tracking. Three of four parts are absent, so this is deliberately not `VERIFIED` |
-| PN-OPS-007 | Test categories | `IMPLEMENTED_UNVERIFIED` | Unit tests exist and run in CI | Property, integration, golden-image, scene, performance, soak, fuzz, network-chaos, recovery, and end-to-end categories do not exist yet |
+| PN-OPS-007 | Test categories | `IMPLEMENTED_UNVERIFIED` | Unit tests exist and run in CI; a concurrency soak exists for the scheduler | Property, golden-image, scene, performance, fuzz, network-chaos, recovery, and end-to-end categories do not exist yet |
+| PN-PLT-013 | Work-stealing job graph | `IMPLEMENTED_UNVERIFIED` | Correct under concurrency: 48 sanitizer runs clean; exact-once delivery asserted across thousands of items; steal counters asserted non-zero so a silent degradation to single-threaded fails | **That it scales is not shown.** The acceptance criterion is scaling with core count, and this host has four cores and no performance budget to measure against (`BLOCK-002`). Scaling is a target, not an achievement |
+| PN-PLT-014 | Synchronization, cancellation, deadlock diagnostics | `IMPLEMENTED_UNVERIFIED` | ThreadSanitizer clean under both compilers; cancellation releases waiters; nested waiting does not deadlock | No deadlock *diagnostics* - detection and reporting of a stuck graph does not exist |
+| PN-PLT-005 | Virtual memory reservation and commit | `IMPLEMENTED_UNVERIFIED` | POSIX backend verified: reserve without commit, growth preserving both base address and contents, decommit, idempotent release, and composition with a core arena | The **Windows** backend - the declared first target platform - is written but cannot be compiled or run here (`BLOCK-001`) |
+| PN-PLT-007 | Memory tracking and leak detection | `IMPLEMENTED_UNVERIFIED` | Per-tag attribution, retained peaks, and a live-allocation check that is the shape of the shutdown leak assertion | Guard pages in diagnostic builds do not exist |
+| PN-PLT-003 | Monotonic time, fixed and variable ticks, frame pacing | `IMPLEMENTED_UNVERIFIED` | `FixedTimestep` is a pure function of its deltas, so pacing is tested deterministically: simulation time conserved exactly over 1,000 uneven frames, oversized deltas clamped, step count capped against a spiral, negative deltas neutralised | Simulation pause/step and time scaling do not exist |
+| PN-PLT-012 | Thread abstraction, affinity, naming | `IMPLEMENTED_UNVERIFIED` | Hardware thread count never returns zero; naming is best-effort and safe from any thread | Affinity is not implemented |
+| PN-PHY-016 | Fixed-step policy with render interpolation | `IMPLEMENTED_UNVERIFIED` | The accumulator and interpolation factor are implemented and tested | Its acceptance criterion is "no visible stutter", which needs a renderer that does not exist |
 
 ## Documented conventions with enforcing tests
 
@@ -77,6 +102,9 @@ written down.
 | f32 ULP figures quoted in `docs/conventions.md` | `precision.f32_ulp_table_matches_conventions_document` |
 | Camera-relative rendering preserves detail at 500 km | `precision.camera_relative_conversion_preserves_detail_at_500km` |
 | Naive f32 world space fails at 500 km (negative control) | `precision.naive_f32_world_space_visibly_fails_at_500km` |
+| Comparison macros evaluate each operand exactly once | `framework.check_eq_evaluates_each_operand_exactly_once` and six siblings |
+| A deque item is never taken twice, and never lost | `deque.concurrent_drain_takes_every_item_exactly_once` |
+| The scheduler genuinely steals rather than degrading to single-threaded | `job_system.stealing_actually_happens_under_load` |
 
 ## Blocked
 

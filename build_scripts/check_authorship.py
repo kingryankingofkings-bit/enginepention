@@ -19,6 +19,17 @@ SOURCE_SUFFIXES = (".hpp", ".cpp", ".h", ".cc", ".inl")
 HEADER_SCAN_LINES = 12
 
 
+
+def _is_generated(path: Path) -> bool:
+    """True for paths inside a build or generated tree.
+
+    The checks walk the source tree directly rather than asking git, so they
+    must skip generated output themselves. A stray nested build/ directory
+    otherwise fails the authorship check on CMake's own compiler-probe file.
+    """
+    return any(part in {"build", "out", "CMakeFiles", ".git"} or part.startswith("build-")
+               for part in path.parts)
+
 def offending_files(repo_root: Path) -> list[tuple[Path, str]]:
     problems: list[tuple[Path, str]] = []
     for root_name in SOURCE_ROOTS:
@@ -26,6 +37,8 @@ def offending_files(repo_root: Path) -> list[tuple[Path, str]]:
         if not root.is_dir():
             continue
         for path in sorted(root.rglob("*")):
+            if _is_generated(path):
+                continue
             if path.suffix not in SOURCE_SUFFIXES or not path.is_file():
                 continue
             try:

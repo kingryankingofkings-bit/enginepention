@@ -1,6 +1,8 @@
-# Build output
-/build/
-/build-*/
+# Build output. Unanchored so a build directory created anywhere in the tree is
+# ignored, not just one at the root - a stray nested build/ otherwise gets
+# committed and trips the repository checks on CMake's own generated files.
+build/
+build-*/
 /out/
 *.o
 *.obj

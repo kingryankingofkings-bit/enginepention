@@ -35,7 +35,7 @@ to that requirement — never an interface, a stub, or a passing compile.
 `DEFERRED_BY_SCOPE` is used only after the full inventory records why the item
 sits outside the agreed release tier, and never to hide skipped work.
 
-**Current status: 3 `VERIFIED`, 7 `IMPLEMENTED_UNVERIFIED`, 18 `BLOCKED`, 186
+**Current status: 5 `VERIFIED`, 14 `IMPLEMENTED_UNVERIFIED`, 18 `BLOCKED`, 177
 `NOT_STARTED`.** This catalog is the plan of record; the evidence behind each
 non-`NOT_STARTED` state is in
 [FEATURE_TRACEABILITY_MATRIX.md](FEATURE_TRACEABILITY_MATRIX.md). Where the two
@@ -56,18 +56,18 @@ Tiers are cumulative (§6).
 |---|---|---|---|---|---|
 | PN-PLT-001 | Application lifecycle and windowing, display modes, high-DPI | A | — | Windowed/fullscreen/borderless transitions, DPI change at runtime, no leak on shutdown | NOT_STARTED |
 | PN-PLT-002 | Raw keyboard, mouse, controller input; mapping, rebinding, haptics, hot-plug | A | PN-PLT-001 | Synthetic input injection tests; device add/remove during play | NOT_STARTED |
-| PN-PLT-003 | Monotonic time, fixed and variable tick, frame pacing, pause/step, time scaling | A | — | Fixed-step accumulator determinism test across variable frame times | NOT_STARTED |
+| PN-PLT-003 | Monotonic time, fixed and variable tick, frame pacing, pause/step, time scaling | A | — | Fixed-step accumulator determinism test across variable frame times | IMPLEMENTED_UNVERIFIED |
 | PN-PLT-004 | Deterministic seeded RNG with explicit streams | A | — | Same seed reproduces identical sequence across platforms and compilers | NOT_STARTED |
-| PN-PLT-005 | Virtual memory reservation/commit abstraction | A | — | Reserve-then-commit growth test; commit failure handled without crash | NOT_STARTED |
-| PN-PLT-006 | Tagged allocators, arenas, pools, alignment guarantees | A | PN-PLT-005 | Alignment assertions; arena reset; over-alignment types | NOT_STARTED |
-| PN-PLT-007 | Memory tracking, leak detection, guard pages in diagnostic builds | A | PN-PLT-006 | Deliberate leak detected and attributed to allocation site | NOT_STARTED |
-| PN-PLT-008 | Out-of-memory handling with defined recovery boundaries | A | PN-PLT-006 | Injected allocation failure; engine reports rather than faults | NOT_STARTED |
+| PN-PLT-005 | Virtual memory reservation/commit abstraction | A | — | Reserve-then-commit growth test; commit failure handled without crash | IMPLEMENTED_UNVERIFIED |
+| PN-PLT-006 | Tagged allocators, arenas, pools, alignment guarantees | A | PN-PLT-005 | Alignment assertions; arena reset; over-alignment types | VERIFIED |
+| PN-PLT-007 | Memory tracking, leak detection, guard pages in diagnostic builds | A | PN-PLT-006 | Deliberate leak detected and attributed to allocation site | IMPLEMENTED_UNVERIFIED |
+| PN-PLT-008 | Out-of-memory handling with defined recovery boundaries | A | PN-PLT-006 | Injected allocation failure; engine reports rather than faults | VERIFIED |
 | PN-PLT-009 | Cache-aware containers authored in-project | A | PN-PLT-006 | Unit + property tests; bounds-checked in debug | NOT_STARTED |
 | PN-PLT-010 | String, interned name, and handle systems | A | PN-PLT-009 | Interning collision and rehash tests; handle staleness detection | NOT_STARTED |
 | PN-PLT-011 | Generational handles that detect stale access | A | PN-PLT-010 | Freed-then-reused slot yields a detectable stale handle, not an alias | VERIFIED |
-| PN-PLT-012 | Thread abstraction, affinity, naming | A | — | Thread lifecycle test; names visible in diagnostics | NOT_STARTED |
-| PN-PLT-013 | Work-stealing job graph with priorities and dependencies | A | PN-PLT-012 | Scales with core count; randomized scheduling stress finds no deadlock | NOT_STARTED |
-| PN-PLT-014 | Synchronization primitives, cancellation, deadlock diagnostics | A | PN-PLT-013 | TSan clean; cancellation propagates without leaking jobs | NOT_STARTED |
+| PN-PLT-012 | Thread abstraction, affinity, naming | A | — | Thread lifecycle test; names visible in diagnostics | IMPLEMENTED_UNVERIFIED |
+| PN-PLT-013 | Work-stealing job graph with priorities and dependencies | A | PN-PLT-012 | Scales with core count; randomized scheduling stress finds no deadlock | IMPLEMENTED_UNVERIFIED |
+| PN-PLT-014 | Synchronization primitives, cancellation, deadlock diagnostics | A | PN-PLT-013 | TSan clean; cancellation propagates without leaking jobs | IMPLEMENTED_UNVERIFIED |
 | PN-PLT-015 | Asynchronous I/O with cancellation and backpressure | A | PN-PLT-013 | Concurrent read stress; cancel mid-flight leaves no dangling buffer | NOT_STARTED |
 | PN-PLT-016 | Logging, structured events, assertions with categories and levels | A | — | Log capture in tests; assertion fires with source location | NOT_STARTED |
 | PN-PLT-017 | Crash capture, minidump integration, error reporting, recovery boundary | A | PN-PLT-016 | Induced fault produces a usable dump on the target platform | BLOCKED (`BLOCK-001` for the Windows dump path) |
@@ -195,7 +195,7 @@ environment (`BLOCK-001`..`BLOCK-004`). They are blocked, never deferred.
 | PN-PHY-013 | Cloth, rope, soft body with stability tests and scalable solver budgets | D | PN-PHY-008 | Solver remains stable at the documented iteration budget | NOT_STARTED |
 | PN-PHY-014 | Buoyancy and water interaction | C | PN-RND-038 | Floating body equilibrium matches the analytic waterline | NOT_STARTED |
 | PN-PHY-015 | Fluids, gated on a feasibility and performance review | D | PN-PHY-014 | Gate documented before any implementation begins | NOT_STARTED |
-| PN-PHY-016 | Fixed-step policy with render interpolation/extrapolation | A | PN-PLT-003 | No visible stutter at non-multiple frame rates | NOT_STARTED |
+| PN-PHY-016 | Fixed-step policy with render interpolation/extrapolation | A | PN-PLT-003 | No visible stutter at non-multiple frame rates | IMPLEMENTED_UNVERIFIED |
 | PN-PHY-017 | Physics debug drawing, determinism limits documented, replay capture, stress benchmarks | B | PN-PHY-007 | Limits stated explicitly rather than implied | NOT_STARTED |
 
 ## 7.6 Character animation, deformation, and cinematics

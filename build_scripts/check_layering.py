@@ -69,6 +69,17 @@ ENGINE_INCLUDE = re.compile(r'#\s*include\s*[<"]pn/(\w+)/')
 SOURCE_SUFFIXES = (".hpp", ".cpp", ".h", ".cc", ".inl")
 
 
+
+def _is_generated(path: Path) -> bool:
+    """True for paths inside a build or generated tree.
+
+    The checks walk the source tree directly rather than asking git, so they
+    must skip generated output themselves. A stray nested build/ directory
+    otherwise fails the authorship check on CMake's own compiler-probe file.
+    """
+    return any(part in {"build", "out", "CMakeFiles", ".git"} or part.startswith("build-")
+               for part in path.parts)
+
 def module_of(path: Path, engine_root: Path) -> str | None:
     try:
         relative = path.relative_to(engine_root)
@@ -85,6 +96,8 @@ def check(repo_root: Path) -> list[str]:
         return ["engine/ directory not found"]
 
     for path in sorted(engine_root.rglob("*")):
+        if _is_generated(path):
+            continue
         if path.suffix not in SOURCE_SUFFIXES or not path.is_file():
             continue
 
