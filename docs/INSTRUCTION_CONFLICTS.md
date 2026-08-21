@@ -1,0 +1,102 @@
+# Instruction Conflict Register
+
+Master Execution Prompt §1 requires that when two requirements conflict, the
+conflict is **recorded** and the higher-ranked requirement applied — and that no
+requirement is ever silently discarded. This file is that record.
+
+The authority order from §1 is:
+
+1. Law, licenses, patents, security boundaries, factual integrity
+2. Clean-room / original-implementation rules
+3. Verified buildability, correctness, data safety, reproducibility
+4. Required engine capabilities and acceptance gates
+5. Architecture and implementation preferences
+6. Convenience, speed, aesthetics, optional enhancements
+
+§1 further states that **no invoked skill** may weaken levels 1–4.
+
+---
+
+## CONF-001 — Implementation language and first graphics backend
+
+**Status:** Resolved. See [ADR-0001](adr/ADR-0001-language-and-graphics-api.md).
+
+| Source | Requirement |
+|---|---|
+| Master Execution Prompt §2 | C++23; Direct3D 12 as first production backend; RHI boundary designed for a later Vulkan backend; Windows 11 x64 first; CMake + Ninja as external orchestration |
+| `engine-architect` skill | Rust; Vulkan via the `ash` crate; Cargo workspace; `ash` confined to one crate |
+
+**Rank of each:** The prompt's clause is a level-5 architecture preference *in
+isolation*, but it is also load-bearing for level-3 (buildability against the
+declared target) and level-4 (the capability inventory in §7.3 is written in
+terms of an explicit-API RHI with a D3D12-first fallback matrix). The skill's
+clause is level 5 only, and §1 explicitly denies any skill the power to weaken
+levels 1–4.
+
+**Resolution:** The Master Execution Prompt governs. The engine is **C++23**,
+first backend **Direct3D 12**, second backend **Vulkan**, built with **CMake +
+Ninja**. The user's message designating the `.md` file as "your authoritative
+Grandmaster Prompt" independently confirms this ordering.
+
+**What is NOT discarded.** The skill's *language-neutral* engineering content
+does not conflict with the prompt and is adopted in full, because it constitutes
+level-3 correctness guidance rather than level-5 preference:
+
+| Skill guidance | Adopted? | Where |
+|---|---|---|
+| World space `f64`, render space camera-relative `f32` | Yes | Prompt §7.4 requires exactly this; [ADR-0003](adr/ADR-0003-coordinates-units-precision.md) |
+| Bindless / descriptor-indexed resource addressing from the first textured draw | Yes | Prompt §7.3 requires descriptor management + GPU-driven visibility |
+| Render graph before the second pass exists | Yes | Prompt §7.3 requires a data-driven render graph |
+| Reversed-Z, 32-bit float depth, infinite far plane | Yes | [ADR-0003](adr/ADR-0003-coordinates-units-precision.md) |
+| Linear color throughout, sRGB encode exactly once at present | Yes | Prompt §7.3 requires an HDR linear pipeline |
+| Fixed-timestep simulation with interpolated render transforms | Yes | Prompt §7.1 and §7.5 require exactly this |
+| Milestone ordering M0→M12, with the job system and render graph as non-cuttable | Yes, mapped onto the prompt's Phase 0–9 program | [ROADMAP.md](../ROADMAP.md) |
+| Crate/module boundary discipline; the graphics API named in exactly one module | Yes, restated for CMake targets | [ADR-0004](adr/ADR-0004-module-boundaries.md) |
+
+The skill's Rust/Cargo/`ash` specifics are the only discarded portion, and they
+are discarded **explicitly here**, not silently.
+
+---
+
+## CONF-002 — Declared target platform vs. available execution environment
+
+**Status:** Open — permanent for this environment. Managed, not resolved.
+
+| Source | Requirement |
+|---|---|
+| Master Execution Prompt §2 | Windows 11 x64 is the first fully supported development and runtime platform |
+| Observed environment | Headless Ubuntu 24.04 Linux container, no GPU, no Windows SDK, no D3D12 headers, no shader compilers |
+
+**Rank:** Level 3 (verified buildability) collides with a physical fact. §4
+governs: *"If hardware, credentials, signing certificates, proprietary console
+SDKs, or user action are required, isolate the exact blocked test and continue
+all independent work."*
+
+**Resolution:** Windows 11 x64 remains the declared first supported target and
+is **not** downgraded. The Linux host is treated as a development and validation
+environment. Blocked items are enumerated as `BLOCK-001`..`BLOCK-005` in
+[ENVIRONMENT_BASELINE.md](ENVIRONMENT_BASELINE.md) §3, each with the smallest
+exact external action required.
+
+**Explicitly forbidden responses to this conflict**, per §4 and §16 — none of
+these will be used:
+
+- Declaring the renderer complete because it compiles as non-GPU code
+- Substituting a browser, framework demo, or command-line simulation for the engine
+- Lowering an acceptance gate because the hardware to test it is absent
+- Presenting any estimate as a measurement
+
+Every requirement blocked by this conflict is labelled `BLOCKED` in
+[FEATURE_TRACEABILITY_MATRIX.md](../FEATURE_TRACEABILITY_MATRIX.md), never
+`DEFERRED_BY_SCOPE` and never omitted.
+
+---
+
+## CONF-003 — `std::expected` availability across the two supported compilers
+
+**Status:** Resolved. See [ADR-0002](adr/ADR-0002-error-handling-and-expected.md).
+
+Measured, not assumed: `__cpp_lib_expected` is `202211` under `g++ -std=c++23`
+and **absent** under `clang++ -std=c++23` against the same libstdc++. Level-3
+(buildability across the declared toolchains) outranks the convenience of
+using the standard type. Resolution: implement `pn::Expected` in `engine/core`.
