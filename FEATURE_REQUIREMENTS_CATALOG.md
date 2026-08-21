@@ -109,12 +109,17 @@ Tiers are cumulative (§6).
 Requirements marked `BLOCKED` cannot be compiled or executed in the current
 environment (`BLOCK-001`..`BLOCK-004`). They are blocked, never deferred.
 
+[ADR-0009](docs/ADR-0009-hybrid-rust-cpp.md) moved the first backend from
+Direct3D 12 to Vulkan, so the graphics rows below cite `BLOCK-002` (no GPU)
+rather than `BLOCK-001` (no Windows SDK). `BLOCK-001` still stands where the
+requirement is genuinely Windows-specific.
+
 | ID | Requirement | Tier | Depends on | Acceptance / test method | State |
 |---|---|---|---|---|---|
-| PN-RND-001 | Explicit graphics API abstraction: adapter selection, feature queries, queues | A | PN-PLT-018 | Enumerates adapters; capability query drives a fallback decision | BLOCKED (`BLOCK-001`) |
-| PN-RND-002 | Command submission, resource creation, descriptor management | A | PN-RND-001 | Debug layer silent across a full frame | BLOCKED (`BLOCK-001`) |
+| PN-RND-001 | Explicit graphics API abstraction: adapter selection, feature queries, queues | A | PN-PLT-018 | Enumerates adapters; capability query drives a fallback decision | BLOCKED (`BLOCK-002`) - type and command surface generated and compiling ([ADR-0010](docs/ADR-0010-vulkan-bindings-from-the-registry.md)); no adapter has been enumerated because no GPU is present |
+| PN-RND-002 | Command submission, resource creation, descriptor management | A | PN-RND-001 | Validation layers silent across a full frame | BLOCKED (`BLOCK-002`, `BLOCK-004` for validation layers) |
 | PN-RND-003 | Synchronization and barriers as independent sync/access/layout axes | A | PN-RND-001 | Barrier derivation unit-tested on the reference backend without a GPU | NOT_STARTED |
-| PN-RND-004 | Transient resources, upload/readback, device-loss recovery | A | PN-RND-002 | Induced device removal recovers rather than crashes | BLOCKED (`BLOCK-001`) |
+| PN-RND-004 | Transient resources, upload/readback, device-loss recovery | A | PN-RND-002 | Induced device removal recovers rather than crashes | BLOCKED (`BLOCK-002`) |
 | PN-RND-005 | Data-driven render graph with lifetime analysis and hazard validation | A | PN-RND-003 | Hazard cases detected by test; graph emits a pass/resource visualization | NOT_STARTED |
 | PN-RND-006 | Transient memory aliasing in the render graph | A | PN-RND-005 | Total allocation strictly below the naive per-resource sum | NOT_STARTED |
 | PN-RND-007 | Pass scheduling, async-compute eligibility, GPU markers | B | PN-RND-005 | Queue assignment respects declared dependencies | NOT_STARTED |
@@ -123,7 +128,7 @@ environment (`BLOCK-001`..`BLOCK-004`). They are blocked, never deferred.
 | PN-RND-010 | Physically based materials and material instances | B | PN-RND-002 | White furnace test; energy conservation across the roughness range | NOT_STARTED |
 | PN-RND-011 | Custom shader/material graph with codegen | C | PN-RND-010 | Graph and hand-written shader produce identical output | NOT_STARTED |
 | PN-RND-012 | Shader permutations, offline and incremental compilation, PSO cache, hot reload | B | PN-RND-010 | Cache measurably cuts second-run startup; edit reloads without restart | BLOCKED (`BLOCK-003`) |
-| PN-RND-013 | Bindless/descriptor-indexed resource addressing | A | PN-RND-002 | One descriptor set bound per frame; adding a texture rewrites no set | BLOCKED (`BLOCK-001`) |
+| PN-RND-013 | Bindless/descriptor-indexed resource addressing | A | PN-RND-002 | One descriptor set bound per frame; adding a texture rewrites no set | BLOCKED (`BLOCK-002`) |
 | PN-RND-014 | GPU-driven visibility, indirect drawing, frustum and occlusion culling | C | PN-RND-013 | CPU frame time flat from 1k to 100k objects | BLOCKED (`BLOCK-002`) |
 | PN-RND-015 | LOD selection and instance batching | C | PN-RND-014 | No visible popping; transitions measured | NOT_STARTED |
 | PN-RND-016 | Capability-gated mesh/task shader path with raster fallback | C | PN-RND-014 | Both paths produce matching golden images | BLOCKED (`BLOCK-002`) |
@@ -353,8 +358,9 @@ environment (`BLOCK-001`..`BLOCK-004`). They are blocked, never deferred.
 | 7.13 Build / ops / security | 12 |
 | **Total** | **214** |
 
-Requirements currently `BLOCKED` by the environment: 18 — six by `BLOCK-001`
-(no Windows SDK), nine by `BLOCK-002` (no GPU), two by `BLOCK-003` (no shader
-compiler), one by `BLOCK-005` (no signing certificate). Every one names the
-blocker that holds it. None is marked `DEFERRED_BY_SCOPE`; nothing here has been
-scoped away.
+Requirements currently `BLOCKED` by the environment: 18 — two by `BLOCK-001`
+(no Windows SDK), thirteen by `BLOCK-002` (no GPU), two by `BLOCK-003` (no
+shader compiler), one by `BLOCK-004` (no validation layers), one by `BLOCK-005`
+(no signing certificate). One row cites two blockers, so the citations sum to
+nineteen. Every one names the blocker that holds it. None is marked
+`DEFERRED_BY_SCOPE`; nothing here has been scoped away.

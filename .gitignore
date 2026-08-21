@@ -26,6 +26,11 @@ compile_commands.json
 build.ninja
 rules.ninja
 
+# Third-party specifications fetched on demand. Pinned by hash in
+# build_scripts/vulkan_registry_pin.txt, deliberately not committed - see the
+# rationale there, in PROVENANCE_LEDGER.md, and in ADR-0010.
+/third_party/
+
 # Rust build output. CARGO_TARGET_DIR is redirected into the CMake build
 # directory, but a stray `cargo build` run by hand lands here.
 /rust/target/

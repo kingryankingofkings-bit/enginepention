@@ -10,6 +10,10 @@ design document is not evidence.
 Current totals: **5 `VERIFIED`**, 14 `IMPLEMENTED_UNVERIFIED`, 18 `BLOCKED`,
 177 `NOT_STARTED`, of 214. Nothing is `DEFERRED_BY_SCOPE`.
 
+No requirement changed state in the Vulkan binding increment. The bindings are
+infrastructure under PN-RND-001, which stays `BLOCKED`: nothing here has
+enumerated an adapter, because there is no GPU to enumerate one on.
+
 Several entries below are `IMPLEMENTED_UNVERIFIED` despite substantial passing
 tests, because their acceptance criteria are not fully met - most often because
 the criterion names something this environment cannot exercise, such as scaling
@@ -18,10 +22,14 @@ requirement rather than rounded up.
 
 ## Test totals, as counted from the built binaries
 
-152 registered tests across 13 binaries, executing 12,442 assertions, all
-passing in each of 10 build configurations. Counted by running each binary rather than by
-reading the source, because a test that fails to register is invisible to a
-source count.
+162 registered C++ tests across 14 binaries, executing 12,483 assertions, plus
+67 Rust tests across 6 suites. All pass. Counted by running each binary rather
+than by reading the source, because a test that fails to register is invisible
+to a source count.
+
+The C++ figures are re-measured here; an earlier revision of this file said 152
+tests across 13 binaries, which had gone stale by one binary and one round of
+test fixes.
 
 **Independently reproduced on a clean machine.** GitHub Actions run
 [32481092505](https://github.com/kingryankingofkings-bit/enginepention/actions/runs/32481092505)
@@ -35,7 +43,7 @@ This matters more than the local run it duplicates: it is the first evidence in
 this repository that the build reproduces somewhere other than the machine it
 was written on.
 
-| Binary | Tests | Checks |
+| C++ binary | Tests | Checks |
 |---|---|---|
 | `pn_test_testing_self` | 16 | 49 |
 | `pn_test_math_vector` | 7 | 18 |
@@ -48,9 +56,24 @@ was written on.
 | `pn_test_platform_virtual_memory` | 12 | 56 |
 | `pn_test_platform_clock` | 13 | 2,036 |
 | `pn_test_platform_thread` | 4 | 4 |
-| `pn_test_jobs_deque` | 8 | 8,140 |
-| `pn_test_jobs_job_system` | 16 | 1,544 |
-| **Total** | **152** | **12,442** |
+| `pn_test_jobs_deque` | 10 | 8,154 |
+| `pn_test_jobs_job_system` | 17 | 1,548 |
+| `pn_test_jobs_c_api` | 7 | 23 |
+| **Total** | **162** | **12,483** |
+
+The Rust workspace reports pass/fail per test rather than per assertion, so its
+tests are counted separately rather than folded into a total that would mean two
+different things:
+
+| Rust suite | Tests | Covers |
+|---|---|---|
+| `pn-jobs` `boundary.rs` | 9 | The FFI contract: one crossing per operation and per chunk, never per element; a panicking body contained and reported |
+| `vkgen` `xml_parser.rs` | 15 | The pull parser, including mixed content in document order |
+| `vkgen` `registry_model.rs` | 11 | Extension-enum numbering, core-version layering, funcpointer signatures, `implicitexternsyncparams` exclusion |
+| `vkgen` `emit.rs` | 11 | Emitted shape: transparent newtypes, bit 63 unsigned, C array extent order, keyword escaping, dispatch-table classification |
+| `vkgen` `sha256.rs` | 6 | FIPS PUB 180-4 published vectors |
+| `pn-vulkan-sys` `bindings.rs` | 15 | Constant values and layouts against the Vulkan specification |
+| **Total** | **67** | |
 
 Concurrency soak beyond the matrix: 48 further runs of the two jobs suites under
 ThreadSanitizer (both compilers) and AddressSanitizer, zero failures and zero
@@ -112,3 +135,10 @@ The 18 requirements blocked by this environment are listed with their blockers
 in [FEATURE_REQUIREMENTS_CATALOG.md](FEATURE_REQUIREMENTS_CATALOG.md) and
 [docs/ENVIRONMENT_BASELINE.md](docs/ENVIRONMENT_BASELINE.md) section 3. None has
 been reclassified as `DEFERRED_BY_SCOPE`.
+
+One of them has work behind it that is worth stating precisely, because it is
+the kind of thing that gets rounded up:
+
+| ID | State | What exists | What does not |
+|---|---|---|---|
+| PN-RND-001 | `BLOCKED` (`BLOCK-002`) | `rust/tools/vkgen` and `rust/crates/pn-vulkan-sys`: 563 Vulkan types and 229 commands generated from the pinned Khronos registry, compiling without warnings, with 43 generator tests and 15 binding tests passing. CI re-derives the committed output ([ADR-0010](docs/ADR-0010-vulkan-bindings-from-the-registry.md)) | No adapter has been enumerated, no device created, no Vulkan call made. The layout tests check what C would produce for these declarations; they cannot check what a driver expects, because there is no driver here |

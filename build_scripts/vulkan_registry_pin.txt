@@ -1,0 +1,19 @@
+# Pention Engine - Vulkan registry pin
+# Requirement: PN-RND-001
+# Decision:    ADR-0009, ADR-0010
+#
+# The single source of truth for which registry the Vulkan bindings are
+# generated from. Read at runtime by build_scripts/fetch_vulkan_registry.py and
+# compiled into rust/tools/vkgen so the fetcher and the generator cannot
+# disagree about what is pinned.
+#
+# `main` is a moving target, so this hash WILL eventually stop matching. That is
+# the point: an unexpected change must interrupt someone rather than silently
+# alter every generated binding. Updating the pin is a deliberate act with a
+# reviewable diff.
+#
+# Pinned on 2026-08-21.
+
+url = https://raw.githubusercontent.com/KhronosGroup/Vulkan-Headers/main/registry/vk.xml
+sha256 = 65d829561fa4b9e01a15e1327d9e6744f66b025b08c5c7ad13636bf0a8b15c62
+header_version = 360

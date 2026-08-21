@@ -53,10 +53,12 @@ function(pn_configure_rust)
     add_dependencies(pn_rust pn_jobs pn_platform pn_core)
 
     if(PN_BUILD_TESTS)
-        add_test(NAME rust_boundary
+        # One cargo invocation runs every crate's tests: the FFI boundary, the
+        # registry parser and emitter, and the generated Vulkan bindings.
+        add_test(NAME rust_workspace
                  COMMAND ${CMAKE_COMMAND} -E env ${_cargo_env}
                          ${PN_CARGO_EXECUTABLE} test --offline
                          --manifest-path "${PN_RUST_MANIFEST}")
-        set_tests_properties(rust_boundary PROPERTIES TIMEOUT 600)
+        set_tests_properties(rust_workspace PROPERTIES TIMEOUT 600)
     endif()
 endfunction()

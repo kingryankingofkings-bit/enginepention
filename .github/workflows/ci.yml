@@ -28,11 +28,19 @@ jobs:
         run: python3 build_scripts/check_no_crate_dependencies.py
       - name: Source is ASCII-only
         run: |
-          if LC_ALL=C grep -rPn '[^\x00-\x7F]' engine/ cmake/ build_scripts/ CMakeLists.txt 2>/dev/null; then
+          if LC_ALL=C grep -rPn '[^\x00-\x7F]' \
+              engine/ cmake/ build_scripts/ rust/crates/ rust/tools/ CMakeLists.txt 2>/dev/null; then
             echo "Non-ASCII characters found in source. Keep source ASCII-only."
             exit 1
           fi
           echo "Source is ASCII-clean"
+
+      - name: Generated Vulkan bindings match the pinned registry
+        # Re-fetches vk.xml, regenerates, and diffs against what is committed.
+        # A hand edit to the generated file, or a generator change nobody
+        # regenerated for, fails here rather than living in the tree with a
+        # provenance header that no longer describes it.
+        run: python3 build_scripts/check_generated_bindings.py
 
   build:
     name: ${{ matrix.compiler }} ${{ matrix.build_type }} ${{ matrix.label }}

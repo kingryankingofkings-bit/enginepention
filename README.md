@@ -38,10 +38,10 @@ remaining 177 are `NOT_STARTED`. Nothing is `DEFERRED_BY_SCOPE`. See
 
 ## What builds and passes today
 
-161 tests across 14 binaries plus a Rust suite, green in **10 build
-configurations** - GCC and Clang, Debug and Release, with exceptions disabled,
-and under ASan+UBSan and TSan. Reproduced from a fresh checkout on clean CI
-runners, not only on the machine it was written on.
+162 C++ tests across 14 binaries and 67 Rust tests across 6 suites, green in
+**10 build configurations** - GCC and Clang, Debug and Release, with exceptions
+disabled, and under ASan+UBSan and TSan. Reproduced from a fresh checkout on
+clean CI runners, not only on the machine it was written on.
 
 | Module | Contents |
 |---|---|
@@ -51,6 +51,8 @@ runners, not only on the machine it was written on.
 | `engine/platform` | Virtual memory with reserve and commit separated, thread abstraction, fixed-timestep accumulator |
 | `engine/jobs` | Bounded work-stealing deque and a job scheduler with dependencies, cancellation, and `parallel_for`, plus the C ABI that Rust uses |
 | `rust/crates/pn-jobs` | Safe Rust over the C++ scheduler - Rust closures running on C++ worker threads, with panics contained at the boundary |
+| `rust/tools/vkgen` | Reads the official Khronos Vulkan registry and writes this project's Rust bindings from it. Includes a zero-dependency XML pull parser and a SHA-256 implemented from FIPS 180-4 |
+| `rust/crates/pn-vulkan-sys` | The generated Vulkan surface: 563 types and 229 commands for core 1.0-1.3 plus `VK_KHR_surface` and `VK_KHR_swapchain`. Nothing here is hand-written |
 
 ```sh
 cmake -S . -B build -G Ninja && cmake --build build && ctest --test-dir build
@@ -59,8 +61,13 @@ cmake -S . -B build -G Ninja && cmake --build build && ctest --test-dir build
 CMake drives cargo; do not run `cargo` directly, as the Rust crates link against
 libraries CMake produces. The Rust workspace declares **zero** external
 dependencies - crates.io is prohibited on the same terms as any other package
-manager, which is why the Vulkan bindings will be generated from the official
-Khronos registry rather than taken from `ash`.
+manager, which is why the Vulkan bindings are generated from the official
+Khronos registry rather than taken from `ash`. See
+[ADR-0010](docs/ADR-0010-vulkan-bindings-from-the-registry.md).
+
+`vk.xml` is not committed; `build_scripts/vulkan_registry_pin.txt` pins its URL
+and SHA-256 so any reviewer can re-fetch the same bytes, and CI re-derives the
+committed bindings from it.
 
 Full instructions: [BUILD.md](BUILD.md).
 

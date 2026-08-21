@@ -77,6 +77,28 @@ C++ archives cannot be linked safely into an uninstrumented Rust binary, and
 stable Rust has no matching sanitizer support. The C++ side keeps full coverage;
 the FFI boundary under a sanitizer is a stated gap.
 
+## Regenerating the Vulkan bindings
+
+`rust/crates/pn-vulkan-sys/src/generated.rs` is committed, so an ordinary build
+needs neither the registry nor a network. Regenerate it only when the pin
+changes or the generator does:
+
+```sh
+python3 build_scripts/fetch_vulkan_registry.py
+cargo run -p vkgen --manifest-path rust/Cargo.toml -- \
+    third_party/vk.xml --emit rust/crates/pn-vulkan-sys/src/generated.rs
+```
+
+`vk.xml` downloads to `third_party/`, which is git-ignored: it is another
+party's authored file and is deliberately not vendored. What is committed is
+`build_scripts/vulkan_registry_pin.txt` - the URL, the SHA-256, and the header
+version - which the fetcher reads and `vkgen` compiles in, so the two cannot
+disagree about what is pinned. A hash mismatch is a hard failure; adopting a new
+registry means editing the pin and reviewing the regenerated diff.
+
+Running `vkgen` without `--emit` prints what it parsed and exits, which is a
+quick way to see what a registry bump changed.
+
 ## Repository checks
 
 These enforce rules that erode instantly if left to convention. Both run in CI
@@ -87,7 +109,12 @@ and both are proven to fail on deliberate violations - see
 python3 build_scripts/check_authorship.py            # every source file names its requirement and ADR
 python3 build_scripts/check_layering.py              # dependency direction; graphics API confined to one module
 python3 build_scripts/check_no_crate_dependencies.py # no crates.io, git, or registry dependencies
+python3 build_scripts/check_generated_bindings.py    # committed Vulkan bindings match the pinned registry
 ```
+
+The last one re-fetches `vk.xml`, regenerates, and diffs. It needs network
+access; unlike the other three it fails rather than passes when it cannot reach
+the registry, because an unverifiable check is not a passing one.
 
 ## Running a subset of tests
 

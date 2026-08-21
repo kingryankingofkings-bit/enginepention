@@ -68,10 +68,21 @@ crate.
 This has one consequence worth naming, because it contradicts advice this
 project was given. The `engine-architect` skill specifies **Vulkan via the `ash`
 crate**; `ash` is prohibited here. What is permitted instead is the official
-Khronos registry - `vk.xml` and the official headers - which §3.2 allows as an
-official graphics API specification, and which was retrieved successfully from
-this environment. Bindings are generated from that registry by a tool in this
-repository.
+Khronos registry - `vk.xml` - which §3.2 allows as an official graphics API
+specification, and which was retrieved successfully from this environment.
+
+This is now built, not planned. `rust/tools/vkgen` reads the registry's
+declarations and writes this project's own Rust from them; the result is
+`rust/crates/pn-vulkan-sys`. The registry is **not committed** - it is another
+party's authored file - but the pin is, in
+`build_scripts/vulkan_registry_pin.txt`, so any reviewer can re-fetch the same
+bytes. `build_scripts/check_generated_bindings.py` re-derives the committed
+output in CI and fails on a hand edit. See
+[ADR-0010](docs/ADR-0010-vulkan-bindings-from-the-registry.md).
+
+The trade is worth stating plainly: this is *more* provenance-clean than a
+binding crate would be, not a grudging substitute for one. There is no
+third-party code in the tree, and the single input is pinned by hash.
 
 The same reasoning excludes `winit`, `glam`, `rayon`, `serde`, `wgpu`,
 `tokio`, and every other crate that would supply engine behaviour. The Rust

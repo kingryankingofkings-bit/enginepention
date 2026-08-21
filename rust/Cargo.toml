@@ -11,6 +11,8 @@ resolver = "2"
 members = [
     "crates/pn-jobs-sys",
     "crates/pn-jobs",
+    "crates/pn-vulkan-sys",
+    "tools/vkgen",
 ]
 
 [workspace.package]

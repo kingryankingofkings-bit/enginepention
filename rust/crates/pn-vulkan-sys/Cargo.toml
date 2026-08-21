@@ -1,0 +1,12 @@
+# Requirement: PN-RND-001, PN-RND-002
+# Decision:    ADR-0009, ADR-0010
+
+[package]
+name = "pn-vulkan-sys"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+publish.workspace = true
+description = "Vulkan type and constant bindings generated from the official Khronos registry"
+
+[dependencies]

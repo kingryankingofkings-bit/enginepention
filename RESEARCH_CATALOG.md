@@ -165,6 +165,67 @@ blocked-domain list and what it costs.
 
 ---
 
+## S-007 — Vulkan API Registry (`vk.xml`)
+
+- **Tier:** 1. The registry is the machine-readable form of the Vulkan
+  specification, published by Khronos.
+- **Source:** `KhronosGroup/Vulkan-Headers`, `registry/vk.xml`
+- **Retrieved:** 2026-08-21 — 3,303,216 bytes, HTTP 200
+- **Pinned:** `VK_HEADER_VERSION 360`, sha256
+  `65d829561fa4b9e01a15e1327d9e6744f66b025b08c5c7ad13636bf0a8b15c62`
+  (`build_scripts/vulkan_registry_pin.txt`)
+
+### What was taken
+
+The declarations themselves: 63 handles, 357 enumerant groups, 1,759 structures
+and unions, 865 commands, 11 callback types, 20 API versions, and 706
+extensions. Scoped to core 1.0–1.3 plus `VK_KHR_surface` and
+`VK_KHR_swapchain`, that is 563 types and 229 commands.
+
+Two rules were read out of the registry schema rather than hard-coded from
+observed results:
+
+- **Extension enumerant numbering:** `1000000000 + (extnumber - 1) * 1000 +
+  offset`, negated when the entry carries `dir="-"`. Checked against
+  `VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR` (extension 2, offset 0) =
+  1000001000 and `VK_ERROR_OUT_OF_DATE_KHR` = -1000001004.
+- **Core-version layering:** `VK_VERSION_1_0` depends on
+  `VK_GRAPHICS_VERSION_1_0`, which depends on `VK_COMPUTE_VERSION_1_0`, which
+  depends on `VK_BASE_VERSION_1_0`. These `apitype="internal"` features carry
+  most of the actual requirements: selecting `VK_VERSION_1_0` without following
+  the chain yields 22 types and 14 commands instead of 563 and 229.
+
+### What was not taken
+
+No code. The registry is read as a specification, exactly as the prose
+specification is read. The file is not committed, and nothing Khronos authored
+appears in this repository.
+
+---
+
+## S-008 — FIPS PUB 180-4, Secure Hash Standard
+
+- **Tier:** 1. A published NIST standard.
+- **Retrieved:** 2026-08-21
+- **Sections used:** 4.1.2 and 4.2.2 (functions and round constants), 5.1.1
+  (padding), 5.3.3 (initial hash value), 6.2 (SHA-256 computation), Appendix B
+  (test vectors).
+
+### Why this is here at all
+
+The generated bindings carry the SHA-256 of the registry they came from.
+Without a hash, "regenerated from `vk.xml`" is an unverifiable claim - the file
+could have come from any registry, or an edited one. `vkgen` therefore verifies
+the pin itself rather than trusting the Python fetcher to have done so.
+
+Implemented from the algorithm description in `rust/tools/vkgen/src/sha256.rs`
+and checked against the standard's own published digests for the empty message,
+`abc`, the 448-bit two-block vector, and one million `a`. Those vectors are what
+make the implementation checkable; a hash that is merely self-consistent
+verifies nothing.
+
+---
+
 ## Evidence collection note
 
 Retrieved specification documents are **not** committed to this repository.
