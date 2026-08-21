@@ -31,14 +31,14 @@ is on authorship, not on licensing.
 | 3 - Toolchain bootstrap and Tier A core | In progress |
 | 4-9 | Not started |
 
-Of 214 catalogued requirements: **7 are `VERIFIED`**, 17 are
+Of 214 catalogued requirements: **8 are `VERIFIED`**, 17 are
 `IMPLEMENTED_UNVERIFIED`, 18 are `BLOCKED` by this environment, and the
-remaining 172 are `NOT_STARTED`. Nothing is `DEFERRED_BY_SCOPE`. See
+remaining 171 are `NOT_STARTED`. Nothing is `DEFERRED_BY_SCOPE`. See
 [FEATURE_TRACEABILITY_MATRIX.md](FEATURE_TRACEABILITY_MATRIX.md).
 
 ## What builds and passes today
 
-244 C++ tests across 18 binaries and 145 Rust tests across 11 suites, green in
+267 C++ tests across 19 binaries and 145 Rust tests across 11 suites, green in
 **10 build configurations** - GCC and Clang, Debug and Release, with exceptions
 disabled, and under ASan+UBSan and TSan. Reproduced from a fresh checkout on
 clean CI runners, not only on the machine it was written on.
@@ -47,7 +47,7 @@ clean CI runners, not only on the machine it was written on.
 |---|---|
 | `engine/testing` | The in-project test framework, which verifies its own failure reporting |
 | `engine/math` | `f64` world space and camera-relative `f32` render space as distinct types, column-major matrices, reversed-Z infinite projection |
-| `engine/core` | `pn::Expected` fallible-return type, allocation-free `Error`, generational handles, arena and pool allocators with tagged accounting, a counter-based RNG whose output is a pure function of seed, stream, and counter, five containers chosen for cache behaviour the standard library does not offer, and interned names compared as integers |
+| `engine/core` | `pn::Expected` fallible-return type, allocation-free `Error`, generational handles, arena and pool allocators with tagged accounting, a counter-based RNG whose output is a pure function of seed, stream, and counter, five containers chosen for cache behaviour the standard library does not offer, interned names compared as integers, and a canonical little-endian serializer whose every read is bounds-checked |
 | `engine/platform` | Virtual memory with reserve and commit separated, thread abstraction, fixed-timestep accumulator |
 | `engine/jobs` | Bounded work-stealing deque and a job scheduler with dependencies, cancellation, and `parallel_for`, plus the C ABI that Rust uses |
 | `rust/crates/pn-jobs` | Safe Rust over the C++ scheduler - Rust closures running on C++ worker threads, with panics contained at the boundary |

@@ -146,3 +146,28 @@ over freshly inserted keys:
 
 The 100,000-entry cases are the reason this was found at all. The probe test in
 the previous commit stopped at 500 entries, where the difference is invisible.
+
+================================================================================
+Serialization tests, verified to fail on the defects they name, 2026-08-21
+================================================================================
+
+Three properties the format depends on, each removed in turn.
+
+=== Non-canonical varints accepted ===
+`80 00` and `00` both decode to zero. Accepting both means two byte strings mean
+the same thing, and "identical input produces identical bytes" holds in only one
+direction.
+  FAILED: 23 tests, 120087 checks, 1 failure
+
+=== Checksum covers only the payload, not the header ===
+The length field is the one that turns a corrupt byte into an out-of-bounds
+read, so it is the field most worth protecting.
+  FAILED: 23 tests, 120076 checks, 3 failures
+
+=== Fixed-width integers written big-endian ===
+The whole point of writing with shifts rather than a memcpy of the native
+representation.
+  FAILED: 23 tests, 120077 checks, 10 failures
+
+=== With all three restored ===
+  PASSED: 23 tests, 120089 checks, 0 failures
