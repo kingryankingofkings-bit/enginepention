@@ -26,6 +26,12 @@ jobs:
         run: python3 build_scripts/check_layering.py
       - name: No crates.io dependencies
         run: python3 build_scripts/check_no_crate_dependencies.py
+
+      - name: Requirement status summary matches the catalog table
+        # The summary line is written by hand and the table is edited a row at
+        # a time, so the two drift. They had, by seven requirements, before this
+        # check existed.
+        run: python3 build_scripts/check_status_counts.py
       - name: Source is ASCII-only
         run: |
           if LC_ALL=C grep -rPn '[^\x00-\x7F]' \

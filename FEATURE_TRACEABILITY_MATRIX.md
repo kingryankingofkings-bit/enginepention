@@ -22,15 +22,16 @@ requirement rather than rounded up.
 
 ## Test totals, as counted from the built binaries
 
-331 registered C++ tests across 22 binaries, executing 3,117,814 assertions,
+338 registered C++ tests across 22 binaries, executing 4,806,309 assertions,
 plus 145 Rust tests across 11 suites. All pass.
 
-The assertion count is dominated by three binaries that assert per sample
-rather than per case: the generator's statistical tests (884,727) and the two
-container suites' property tests against standard-library oracles (504,516 and
-1,066,347). A statistical property asserted once is not asserted, and a
-container invariant checked on one hand-written sequence is checked on one
-hand-written sequence. Counted by running each binary rather
+The assertion count is dominated by four binaries that assert per sample
+rather than per case: the scene suite's churn against a reference model and its
+per-batch brute-force comparison (1,971,837), the two container suites'
+property tests against standard-library oracles (1,066,347 and 704,719), and
+the generator's statistical tests (884,727). A statistical property asserted
+once is not asserted, and a container invariant checked on one hand-written
+sequence is checked on one hand-written sequence. Counted by running each binary rather
 than by reading the source, because a test that fails to register is invisible
 to a source count.
 
@@ -67,14 +68,14 @@ was written on.
 | `pn_test_core_serialize` | 23 | 120,089 |
 | `pn_test_core_console` | 27 | 1,639 |
 | `pn_test_core_log` | 20 | 63 |
-| `pn_test_scene_world` | 17 | 283,342 |
+| `pn_test_scene_world` | 24 | 1,971,837 |
 | `pn_test_platform_virtual_memory` | 12 | 56 |
 | `pn_test_platform_clock` | 13 | 2,036 |
 | `pn_test_platform_thread` | 4 | 4 |
 | `pn_test_jobs_deque` | 10 | 8,154 |
 | `pn_test_jobs_job_system` | 17 | 1,548 |
 | `pn_test_jobs_c_api` | 7 | 23 |
-| **Total** | **331** | **3,117,814** |
+| **Total** | **338** | **4,806,309** |
 
 The Rust workspace reports pass/fail per test rather than per assertion, so its
 tests are counted separately rather than folded into a total that would mean two
@@ -113,7 +114,8 @@ warnings.
 | PN-PLT-020 | Deterministic serialization with schema migration | `engine/core/include/pn/core/{serialize,checksum}.hpp` | `serialize_test.cpp` (23 tests) | Both clauses. **Golden data:** a committed 31-byte blob is asserted to decode, and separately to be reproduced byte for byte by the writer - checked in both directions, so a failure says which side moved. **Migration:** a version-1 payload is read by version-2 code, the field it never carried is filled from a stated default, and the result is written at the current version and read back unchanged. Encoding is canonical - shortest-form varints, with longer encodings of the same value rejected - and the same values re-encode identically over 20,000 pseudorandom rounds. CRC-32 matches the published check value for `123456789`. Three defects were introduced deliberately and each was caught - `docs/evidence/enforcement-checks.txt` |
 | PN-PLT-019 | Configuration, console variables, command execution | `engine/core/include/pn/core/console.hpp`, `engine/core/src/console.cpp` | `console_test.cpp` (27 tests) | Both clauses. **Round-trip:** four variables of four types are set, saved, loaded into a fresh console, compared value by value, and saved again to the identical file - so it is a round-trip rather than a one-way conversion. Only variables that differ from their default and are flagged to persist are written, because writing everything would freeze today's defaults into every user's config file. **Actionable errors:** each parse failure names what was wrong and the column it happened at, asserted exactly - an unterminated string reports the opening quote rather than the end of the line, a stray argument suggests quoting, and a bad boolean lists the spellings it would have taken. A bad line does not discard the rest of a config file, and an unknown variable is reported without rejecting the file, because a config outlives the variables in it |
 | PN-PLT-016 | Logging, structured events, assertions with categories and levels | `engine/core/include/pn/core/{log,assert}.hpp`, `engine/core/src/log.cpp` | `log_test.cpp` (20 tests) | Both clauses. **Log capture:** a capturing sink receives level, category, message, structured fields and source location, and copies every string out of the record because the views in one point at the caller's stack. Per-category thresholds, records suppressed below a threshold without evaluating their arguments, and 800 records from four threads all arriving with the dispatch TSan-clean. **Assertion fires with source location:** the handler is now replaceable, which is what made this testable at all - an assertion that only ever aborts cannot be observed by the process it aborts - and is what a crash reporter needs anyway. The expression, message, file and line are asserted exactly. Both compile-time gates have a test of their own where they are turned off and the *absence* of an effect is checked |
-| PN-OBJ-001 | Data-oriented entity/component storage with stable handles | `engine/scene/include/pn/scene/world.hpp` | `world_test.cpp` (17 tests, 283,342 checks) | Both clauses. **Randomized churn:** 120,000 create/add/remove/destroy/query operations against a reference model, compared after each one, then a final sweep over *every handle ever issued* - live or not - asserting each resolves exactly as the model says. **Handles never alias:** a destroyed handle and the entity that takes its slot share an index and differ in generation; the old handle is not alive and resolves to no component even after the new entity is given one. A default-constructed handle is refused at index zero, because slot generations start at one. Components of one type are contiguous, and destroying an entity clears it from every storage |
+| PN-OBJ-001 | Data-oriented entity/component storage with stable handles | `engine/scene/include/pn/scene/world.hpp` | `world_test.cpp` (24 tests, 1,971,837 checks) | Both clauses. **Randomized churn:** 120,000 create/add/remove/destroy/query operations against a reference model, compared after each one, then a final sweep over *every handle ever issued* - live or not - asserting each resolves exactly as the model says. **Handles never alias:** a destroyed handle and the entity that takes its slot share an index and differ in generation; the old handle is not alive and resolves to no component even after the new entity is given one. A default-constructed handle is refused at index zero, because slot generations start at one. Components of one type are contiguous, and destroying an entity clears it from every storage |
+| PN-OBJ-002 | Archetype or equivalent query acceleration | `engine/scene/include/pn/scene/world.hpp` | `world_test.cpp` (24 tests, 1,971,837 checks) | The criterion is a cost statement, so it is checked as an operation count rather than a duration: a duration would be a property of the machine that ran it and could not be reported as a result. A query is driven by whichever named storage is **smallest**, chosen at run time, and the world reports how many entities the last query examined. **Cost independent of the total:** a fixed match set of 50 entities is held while the world grows from 100 to 100,000 entities around it - the matches scattered through the large storage rather than appended to it - and the examined count stays at 50 in every case and in either naming order. With three storages of 1,000 / 100 / 10, the smallest drives even when it is named second of three, so neither "keep the first" nor "keep the last" produces the answer. **The acceleration does not change the answer:** 20,000 churn operations over three populations of shifting relative size, with the query compared after every batch against a brute-force scan of every live entity, and the examined count asserted equal to the smaller population at whatever size relationship the churn has produced. Five defects were introduced deliberately and each was caught - `docs/evidence/enforcement-checks.txt`. This is **not** an archetype table: entities are not grouped by their exact component set, so a query still tests membership per candidate. It satisfies the criterion as written, with considerably less machinery, and the header says so rather than letting the requirement's title imply otherwise |
 
 ## Partially verified
 

@@ -257,3 +257,95 @@ then looked it up again, so the check and the use were two different pointers -
 and the storage lookup itself was repeated per entity. Resolving the storages
 into locals before the loop and reusing one lookup per component fixes the
 diagnostic and removes the duplicated search. Clang accepted the original.
+
+================================================================================
+Query acceleration, verified against its defects, 2026-08-21
+================================================================================
+
+PN-OBJ-002's criterion is a cost statement - query cost independent of total
+entity count for a fixed match set - so it is checked as the number of entities
+the query examines, not as a duration. A duration would be a property of this
+machine and could not be reported as a result under the project's performance
+rules; an operation count is a property of the algorithm.
+
+Five defects, each introduced alone.
+
+=== The driver is the first named storage, not the smallest ===
+The behaviour the increment replaces. Note that the criterion test alone catches
+it only because it now runs both naming orders; with the large storage named
+first, the query walks every entity in the world to find fifty.
+  FAILED: 24 tests, 283402 checks, 5 failures
+
+=== The driver is the largest named storage ===
+The comparison inverted, which is what a copy-paste of the selection loop most
+easily produces.
+  FAILED: 24 tests, 283402 checks, 7 failures
+
+=== Statistics not reset at the start of a query ===
+A query that returns early - a named component nobody has - would otherwise
+leave the previous query's numbers standing, and every assertion about a cost
+would be reading a stale one.
+  FAILED: 24 tests, 283427 checks, 5 failures
+
+=== matched incremented before the completeness test ===
+Makes matched equal examined, so the two numbers stop distinguishing "looked at"
+from "visited" and the acceleration claim becomes unfalsifiable.
+  FAILED: 24 tests, 283518 checks, 4 failures
+
+=== examined reported as the total entity count ===
+The instrument lying in the direction that would make a genuine regression
+invisible.
+  FAILED: 24 tests, 283402 checks, 7 failures
+
+=== With all five restored ===
+  PASSED: 24 tests, 1971837 checks, 0 failures
+
+The check counts are again lower on every failing run than on the passing one,
+because the brute-force comparison aborts on its first disagreement. The count
+alone is not a result.
+
+One property is not on this list: that the visitor receives components in the
+order they are named rather than the order they are stored. It has no defect to
+introduce, because the argument order is fixed by the parameter pack at compile
+time while the driver is chosen at run time - a build that got it wrong would
+not compile against a visitor taking two distinct component types. Structural,
+not tested, and said here rather than left to look like an oversight.
+
+================================================================================
+Requirement status summary, verified to fail on drift, 2026-08-21
+================================================================================
+
+The catalog's summary line said 5 VERIFIED / 14 IMPLEMENTED_UNVERIFIED / 18
+BLOCKED / 177 NOT_STARTED while its own table said 12 / 17 / 18 / 167. It had
+been correct several increments earlier; each commit since moved a row and left
+the summary alone. A hand-maintained count of hand-maintained rows drifts, and a
+status summary that drifts is precisely the reporting failure this project's
+rules exist to prevent.
+
+build_scripts/check_status_counts.py recounts the table and compares. Verified
+against three defects:
+
+=== A row moved without the summary ===
+  summary says 12 VERIFIED, table has 21
+  summary says 167 NOT_STARTED, table has 158
+  exit=1
+
+=== A row given a state outside the vocabulary ===
+  PN-OBJ-003: unrecognised state 'MOSTLY_DONE'
+  summary says 167 NOT_STARTED, table has 158
+  exit=1
+
+=== A row deleted ===
+  summary says 167 NOT_STARTED, table has 166
+  summary says 214 requirements, table has 213
+  exit=1
+
+=== The README's restatement of the same four numbers drifted ===
+README.md repeats the counts for a reader who never opens the catalog, so it
+drifts for the same reason and is checked against the same table.
+  README says 13 VERIFIED, table has 12
+  exit=1
+
+=== Against the catalog as committed ===
+  Requirement status summary matches the table (214 requirements)
+  exit=0

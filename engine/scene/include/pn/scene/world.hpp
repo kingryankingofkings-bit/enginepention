@@ -13,6 +13,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <memory>
+#include <array>
 #include <span>
 #include <tuple>
 #include <utility>
@@ -199,70 +200,104 @@ public:
         return std::span<T>{storage->set.values(), storage->set.size()};
     }
 
+    /// What the last query did. For diagnostics and for tests.
+    struct QueryStats {
+        /// Entities the query looked at: the size of the storage it was driven
+        /// by.
+        std::size_t examined = 0;
+        /// Entities that had every named component and were visited.
+        std::size_t matched = 0;
+    };
+
+    /// Statistics from the most recent [`each`] or [`count_with`].
+    const QueryStats& last_query() const noexcept { return last_query_; }
+
     /// Visits every entity that has all of the named components.
     ///
-    /// Iteration is driven by the **first** named type, so name the rarest one
-    /// first: with a thousand cameras and a million transforms,
-    /// `each<Camera, Transform>` tests a thousand entities and
-    /// `each<Transform, Camera>` tests a million for the same answer. Choosing
-    /// the smallest automatically is PN-OBJ-002's job and is not done here.
+    /// Iteration is driven by whichever named storage is **smallest**, chosen at
+    /// run time, so the cost is set by the rarest component and not by how many
+    /// entities exist. With a thousand cameras among a million transforms, a
+    /// query for both examines a thousand entities whichever order they are
+    /// named in.
+    ///
+    /// That is the whole of the acceleration, and it is worth being plain about
+    /// what it is not: this is not an archetype table. Entities are not grouped
+    /// by their exact component set, so a query still tests membership per
+    /// candidate. What it buys is that the candidate set is the smallest one
+    /// available rather than the first one named - which is what the requirement
+    /// asks for, and considerably less machinery than archetypes for the same
+    /// property.
+    ///
+    /// The visitor receives components in the order they are named, not the
+    /// order they are stored in. The driver being chosen at run time must not
+    /// leak into the call site.
     ///
     /// The visitor must not create or destroy entities, or add or remove
-    /// components of the driving type: doing so moves the dense array underneath
+    /// components of any named type: doing so moves the dense arrays underneath
     /// the loop. Removing is the tempting one, and it is exactly the one that
     /// swaps an unvisited element into a slot already passed.
-    template <typename First, typename... Rest, typename Visitor>
+    template <typename... Ts, typename Visitor>
     void each(Visitor&& visit) {
-        Storage<First>* driver = find_storage<First>();
-        if (driver == nullptr) {
-            return;
-        }
-        // The other storages are resolved **into locals** before the loop, and
-        // the loop uses those locals. Calling find_storage again inside the loop
-        // would look the same to a reader and not to a compiler: each call reads
-        // a vector element, so GCC cannot carry the null check across, and at
-        // -O3 it reports the dereference as potentially null - correctly, since
-        // nothing in the code connects the two calls.
-        auto others = std::make_tuple(find_storage<Rest>()...);
+        static_assert(sizeof...(Ts) > 0, "a query must name at least one component type");
+        last_query_ = QueryStats{};
+
+        // Resolved into locals before the loop, and the loop uses those locals.
+        // Calling find_storage again inside would look the same to a reader and
+        // not to a compiler: each call reads a vector element, so the null check
+        // cannot be carried across, and GCC at -O3 reports the dereference as
+        // potentially null - correctly, since nothing connects the two calls.
+        auto storages = std::make_tuple(find_storage<Ts>()...);
         const bool all_present = std::apply(
-            [](auto*... storages) { return (... && (storages != nullptr)); }, others);
+            [](auto*... entries) { return (... && (entries != nullptr)); }, storages);
         if (!all_present) {
             return;
         }
 
-        const std::size_t count = driver->set.size();
+        const std::array<const StorageBase*, sizeof...(Ts)> bases = std::apply(
+            [](auto*... entries) {
+                return std::array<const StorageBase*, sizeof...(Ts)>{
+                    static_cast<const StorageBase*>(entries)...};
+            },
+            storages);
+
+        const StorageBase* driver = bases[0];
+        for (const StorageBase* candidate : bases) {
+            if (candidate->size() < driver->size()) {
+                driver = candidate;
+            }
+        }
+
+        const std::size_t count = driver->size();
+        last_query_.examined = count;
+
         for (std::size_t position = 0; position < count; ++position) {
-            const std::uint32_t index = driver->set.key_at(position);
+            const std::uint32_t index = driver->key_at(position);
 
             // One lookup per component, kept and reused. Testing membership and
             // then looking the component up again would search twice for the
             // same answer.
             auto found = std::apply(
-                [index](auto*... storages) {
-                    return std::make_tuple(storages->set.find(index)...);
+                [index](auto*... entries) {
+                    return std::make_tuple(entries->set.find(index)...);
                 },
-                others);
+                storages);
             const bool complete = std::apply(
                 [](auto*... pointers) { return (... && (pointers != nullptr)); }, found);
             if (!complete) {
                 continue;
             }
 
+            ++last_query_.matched;
             const Entity entity{index, slots_[index].generation};
-            std::apply(
-                [&](auto*... pointers) {
-                    visit(entity, driver->set[position], *pointers...);
-                },
-                found);
+            std::apply([&](auto*... pointers) { visit(entity, *pointers...); }, found);
         }
     }
 
     /// How many entities have all of the named components.
-    template <typename First, typename... Rest>
+    template <typename... Ts>
     std::size_t count_with() {
-        std::size_t total = 0;
-        each<First, Rest...>([&total](Entity, First&, Rest&...) { ++total; });
-        return total;
+        each<Ts...>([](Entity, Ts&...) {});
+        return last_query_.matched;
     }
 
 private:
@@ -273,18 +308,30 @@ private:
         bool alive = false;
     };
 
+    /// The type-erased half of a component storage.
+    ///
+    /// `size` and `key_at` exist so a query can be driven by whichever storage
+    /// turns out to be smallest, which is only known at run time. Without them
+    /// the driver would have to be chosen at compile time, which is to say
+    /// guessed by the caller.
     struct StorageBase {
         StorageBase() = default;
         StorageBase(const StorageBase&) = delete;
         StorageBase& operator=(const StorageBase&) = delete;
         virtual ~StorageBase() = default;
         virtual void remove(std::uint32_t index) = 0;
+        virtual std::size_t size() const noexcept = 0;
+        virtual std::uint32_t key_at(std::size_t position) const noexcept = 0;
     };
 
     template <typename T>
     struct Storage final : StorageBase {
         core::SparseSet<T> set;
         void remove(std::uint32_t index) override { set.remove(index); }
+        std::size_t size() const noexcept override { return set.size(); }
+        std::uint32_t key_at(std::size_t position) const noexcept override {
+            return set.key_at(position);
+        }
     };
 
     template <typename T>
@@ -314,6 +361,7 @@ private:
     /// const accessors and only reads.
     mutable std::vector<std::unique_ptr<StorageBase>> storages_;
     std::size_t live_count_ = 0;
+    QueryStats last_query_{};
 };
 
 }  // namespace pn::scene

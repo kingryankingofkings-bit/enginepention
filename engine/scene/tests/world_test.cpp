@@ -1,5 +1,5 @@
 // Pention Engine - scene/tests/world_test.cpp
-// Requirement: PN-OBJ-001
+// Requirement: PN-OBJ-001, PN-OBJ-002
 // Decision:    ADR-0004
 //
 // PN-OBJ-001's criterion names two things: add/remove/query under randomized
@@ -7,11 +7,17 @@
 // matters most and is easiest to get wrong quietly - an aliasing handle returns
 // the wrong component rather than failing, so nothing crashes and the bug
 // presents as a gameplay oddity weeks later.
+//
+// PN-OBJ-002's criterion is a cost statement rather than a result statement:
+// query cost independent of total entity count for a fixed match set. It is
+// checked here as a count of entities examined, not as a duration - see the
+// note on the first test in that section.
 
 #include "pn/core/random.hpp"
 #include "pn/scene/world.hpp"
 #include "pn/testing/test.hpp"
 
+#include <algorithm>
 #include <cstdint>
 #include <map>
 #include <set>
@@ -467,4 +473,259 @@ PN_TEST(world, components_that_own_memory_are_destroyed_exactly_once) {
         ++seen;
     });
     PN_CHECK_EQ(seen, std::size_t{100});
+}
+
+// -------------------------------------------------------------------
+// Query acceleration (PN-OBJ-002)
+// -------------------------------------------------------------------
+
+namespace {
+
+struct Rare {
+    int value = 0;
+};
+
+struct Middle {
+    int value = 0;
+};
+
+struct Common {
+    int value = 0;
+};
+
+/// Builds a world of `match_count + filler` entities, every one of them holding
+/// a Common, of which `match_count` also hold a Rare.
+///
+/// The matches are spread evenly through the run rather than created first, so
+/// they are scattered through the Common storage instead of sitting in its
+/// leading slots. An implementation that walked Common and stopped once it had
+/// found every Rare would pass the appended arrangement and fail this one.
+std::vector<Entity> build_haystack(World& world, std::size_t match_count, std::size_t filler) {
+    const std::size_t total = match_count + filler;
+    std::vector<Entity> matches;
+    std::size_t placed = 0;
+    for (std::size_t index = 0; index < total; ++index) {
+        const Entity entity = world.create();
+        if (placed * total < match_count * (index + 1)) {
+            world.add(entity, Rare{static_cast<int>(placed)});
+            world.add(entity, Common{static_cast<int>(placed) * 10});
+            matches.push_back(entity);
+            ++placed;
+        } else {
+            world.add(entity, Common{-1});
+        }
+    }
+    return matches;
+}
+
+}  // namespace
+
+PN_TEST(world, query_cost_is_independent_of_total_entity_count) {
+    // PN-OBJ-002's criterion, stated as an operation count rather than a
+    // duration. A duration would depend on the machine it ran on and could not
+    // be claimed as a result under the project's performance rules; the number
+    // of entities the query looks at is a property of the algorithm and holds
+    // wherever it runs.
+    //
+    // The match set is fixed at fifty. The total grows by three orders of
+    // magnitude around it, and the count of entities examined must not move.
+    for (const std::size_t total : {std::size_t{100}, std::size_t{10000}, std::size_t{100000}}) {
+        World world;
+        const std::vector<Entity> matches = build_haystack(world, 50, total - 50);
+        PN_REQUIRE_EQ(matches.size(), std::size_t{50});
+        PN_REQUIRE_EQ(world.entity_count(), total);
+        PN_REQUIRE_EQ(world.component_count<Common>(), total);
+        PN_REQUIRE_EQ(world.component_count<Rare>(), std::size_t{50});
+
+        std::size_t seen = 0;
+        world.each<Rare, Common>([&](Entity, Rare&, Common&) { ++seen; });
+        PN_CHECK_EQ(seen, std::size_t{50});
+        PN_CHECK_EQ(world.last_query().examined, std::size_t{50});
+        PN_CHECK_EQ(world.last_query().matched, std::size_t{50});
+
+        // Again with the large storage named first, so this test alone covers
+        // the criterion rather than leaving half of it to the next one.
+        seen = 0;
+        world.each<Common, Rare>([&](Entity, Common&, Rare&) { ++seen; });
+        PN_CHECK_EQ(seen, std::size_t{50});
+        PN_CHECK_EQ(world.last_query().examined, std::size_t{50});
+        PN_CHECK_EQ(world.last_query().matched, std::size_t{50});
+    }
+}
+
+PN_TEST(world, naming_order_does_not_change_what_a_query_costs) {
+    // The driver is chosen by size, not by position in the argument list. If it
+    // were the first named type, one of these two would examine twenty thousand
+    // entities to find fifty.
+    World world;
+    build_haystack(world, 50, 20000 - 50);
+
+    world.each<Rare, Common>([](Entity, Rare&, Common&) {});
+    const World::QueryStats rare_first = world.last_query();
+    world.each<Common, Rare>([](Entity, Common&, Rare&) {});
+    const World::QueryStats common_first = world.last_query();
+
+    PN_CHECK_EQ(rare_first.examined, std::size_t{50});
+    PN_CHECK_EQ(rare_first.matched, std::size_t{50});
+    PN_CHECK_EQ(common_first.examined, std::size_t{50});
+    PN_CHECK_EQ(common_first.matched, std::size_t{50});
+}
+
+PN_TEST(world, the_smallest_of_three_storages_drives_even_when_named_in_the_middle) {
+    World world;
+    for (int index = 0; index < 1000; ++index) {
+        const Entity entity = world.create();
+        world.add(entity, Common{index});
+        if (index % 10 == 0) {
+            world.add(entity, Middle{index});
+        }
+        if (index % 100 == 0) {
+            world.add(entity, Rare{index});
+        }
+    }
+    PN_REQUIRE_EQ(world.component_count<Common>(), std::size_t{1000});
+    PN_REQUIRE_EQ(world.component_count<Middle>(), std::size_t{100});
+    PN_REQUIRE_EQ(world.component_count<Rare>(), std::size_t{10});
+
+    // Rare is named second of three: neither the first candidate nor the last,
+    // so neither "keep the first" nor "keep the last" produces this answer.
+    std::size_t seen = 0;
+    world.each<Common, Rare, Middle>([&](Entity, Common&, Rare&, Middle&) { ++seen; });
+    PN_CHECK_EQ(seen, std::size_t{10});
+    PN_CHECK_EQ(world.last_query().examined, std::size_t{10});
+    PN_CHECK_EQ(world.last_query().matched, std::size_t{10});
+}
+
+PN_TEST(world, a_query_hands_components_over_in_the_order_they_are_named) {
+    // Choosing the driver at run time must not reach the call site. Naming the
+    // larger storage first still hands the visitor that component first.
+    World world;
+    const Entity subject = world.create();
+    world.add(subject, Common{7});
+    world.add(subject, Rare{3});
+    for (int index = 0; index < 100; ++index) {
+        world.add(world.create(), Common{0});
+    }
+
+    std::size_t seen = 0;
+    world.each<Common, Rare>([&](Entity found, Common& common, Rare& rare) {
+        PN_REQUIRE(found == subject);
+        PN_REQUIRE_EQ(common.value, 7);
+        PN_REQUIRE_EQ(rare.value, 3);
+        ++seen;
+    });
+    PN_CHECK_EQ(seen, std::size_t{1});
+    // Rare drove it even though Common was named first.
+    PN_CHECK_EQ(world.last_query().examined, std::size_t{1});
+}
+
+PN_TEST(world, entities_in_the_driving_storage_that_do_not_match_are_examined_not_visited) {
+    World world;
+    for (int index = 0; index < 60; ++index) {
+        const Entity entity = world.create();
+        world.add(entity, Rare{index});
+        if (index < 50) {
+            world.add(entity, Common{index});
+        }
+    }
+    for (int index = 0; index < 5000; ++index) {
+        world.add(world.create(), Common{-1});
+    }
+
+    std::size_t seen = 0;
+    world.each<Rare, Common>([&](Entity, Rare&, Common&) { ++seen; });
+    PN_CHECK_EQ(seen, std::size_t{50});
+    PN_CHECK_EQ(world.last_query().examined, std::size_t{60});
+    PN_CHECK_EQ(world.last_query().matched, std::size_t{50});
+}
+
+PN_TEST(world, statistics_describe_the_most_recent_query_only) {
+    World world;
+    build_haystack(world, 20, 480);
+
+    world.each<Common>([](Entity, Common&) {});
+    PN_CHECK_EQ(world.last_query().examined, std::size_t{500});
+    PN_CHECK_EQ(world.last_query().matched, std::size_t{500});
+
+    world.each<Rare>([](Entity, Rare&) {});
+    PN_CHECK_EQ(world.last_query().examined, std::size_t{20});
+    PN_CHECK_EQ(world.last_query().matched, std::size_t{20});
+
+    // A type nobody in this world has. The query stops before examining
+    // anything, and the previous query's numbers must not still be standing.
+    world.each<Middle>([](Entity, Middle&) {});
+    PN_CHECK_EQ(world.last_query().examined, std::size_t{0});
+    PN_CHECK_EQ(world.last_query().matched, std::size_t{0});
+
+    // count_with reports the same match count, since it is the same query.
+    PN_CHECK_EQ((world.count_with<Rare, Common>()), std::size_t{20});
+    PN_CHECK_EQ(world.last_query().examined, std::size_t{20});
+}
+
+PN_TEST(world, the_driver_chosen_by_size_matches_what_a_brute_force_scan_would) {
+    // Acceleration that changes the answer is not acceleration. Three
+    // populations of very different and shifting sizes are churned, and after
+    // every batch the query's result is compared against a scan of every live
+    // entity - which is the definition the fast path has to agree with.
+    World world;
+    Random random{20260821, 22};
+    std::vector<Entity> live;
+
+    auto key_of = [](Entity entity) {
+        return (static_cast<std::uint64_t>(entity.index()) << 32) | entity.generation();
+    };
+
+    for (int step = 0; step < 20000; ++step) {
+        const std::uint64_t choice = random.uniform(0, 99);
+
+        if (live.empty() || choice < 45) {
+            const Entity entity = world.create();
+            world.add(entity, Common{step});
+            if (random.uniform(0, 9) == 0) {
+                world.add(entity, Middle{step});
+            }
+            if (random.uniform(0, 99) == 0) {
+                world.add(entity, Rare{step});
+            }
+            live.push_back(entity);
+            continue;
+        }
+
+        const std::size_t slot = random.uniform(0, live.size() - 1);
+        const Entity entity = live[slot];
+
+        if (choice < 60) {
+            world.remove<Middle>(entity);
+        } else if (choice < 68) {
+            world.remove<Common>(entity);
+        } else if (choice < 72) {
+            world.add(entity, Middle{step});
+        } else if (choice < 80) {
+            PN_REQUIRE(world.destroy(entity));
+            live[slot] = live.back();
+            live.pop_back();
+        } else {
+            std::set<std::uint64_t> expected;
+            for (const Entity& candidate : live) {
+                if (world.has<Common>(candidate) && world.has<Middle>(candidate)) {
+                    expected.insert(key_of(candidate));
+                }
+            }
+
+            std::set<std::uint64_t> visited;
+            world.each<Common, Middle>([&](Entity found, Common&, Middle&) {
+                PN_REQUIRE(world.alive(found));
+                visited.insert(key_of(found));
+            });
+
+            PN_REQUIRE(visited == expected);
+            PN_REQUIRE_EQ(world.last_query().matched, expected.size());
+            // The acceleration property, re-checked at every size relationship
+            // the churn happens to produce: never more than the smaller of the
+            // two populations, whichever one that currently is.
+            PN_REQUIRE_EQ(world.last_query().examined,
+                          std::min(world.component_count<Common>(),
+                                   world.component_count<Middle>()));
+        }
+    }
 }

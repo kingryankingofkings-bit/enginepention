@@ -22,7 +22,8 @@ the skill is level 5.
 | 4-9 | Not started |
 
 Within Phase 3, the Tier A pieces that exist are the build system, the test
-framework, math, core, platform, and the job scheduler; plus, on the Rust side,
+framework, math, core, platform, the job scheduler, and the entity/component
+world with its queries; plus, on the Rust side,
 the generated Vulkan type and command surface
 ([ADR-0010](docs/adr/ADR-0010-vulkan-bindings-from-the-registry.md)), barrier
 derivation (`pn-rhi`), the render graph (`pn-render-graph`), and a reference

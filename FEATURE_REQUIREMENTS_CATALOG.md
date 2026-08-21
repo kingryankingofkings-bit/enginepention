@@ -35,8 +35,12 @@ to that requirement — never an interface, a stub, or a passing compile.
 `DEFERRED_BY_SCOPE` is used only after the full inventory records why the item
 sits outside the agreed release tier, and never to hide skipped work.
 
-**Current status: 5 `VERIFIED`, 14 `IMPLEMENTED_UNVERIFIED`, 18 `BLOCKED`, 177
-`NOT_STARTED`.** This catalog is the plan of record; the evidence behind each
+**Current status: 12 `VERIFIED`, 17 `IMPLEMENTED_UNVERIFIED`, 18 `BLOCKED`, 167
+`NOT_STARTED`, of 214.** These four numbers had drifted from the table below -
+they were last correct several increments ago, and every commit since moved a
+row without moving the summary. `build_scripts/check_status_counts.py` now
+recounts them from the table and fails the build if they disagree, because a
+status summary nobody can trust is worse than no summary at all. This catalog is the plan of record; the evidence behind each
 non-`NOT_STARTED` state is in
 [FEATURE_TRACEABILITY_MATRIX.md](FEATURE_TRACEABILITY_MATRIX.md). Where the two
 disagree, the traceability matrix is authoritative, because it cites the
@@ -87,7 +91,7 @@ Tiers are cumulative (§6).
 | ID | Requirement | Tier | Depends on | Acceptance / test method | State |
 |---|---|---|---|---|---|
 | PN-OBJ-001 | Data-oriented entity/component storage with stable handles | A | PN-PLT-011 | Add/remove/query under randomized churn; handles never silently alias | VERIFIED |
-| PN-OBJ-002 | Archetype or equivalent query acceleration | A | PN-OBJ-001 | Query cost independent of total entity count for a fixed match set | NOT_STARTED |
+| PN-OBJ-002 | Archetype or equivalent query acceleration | A | PN-OBJ-001 | Query cost independent of total entity count for a fixed match set | VERIFIED |
 | PN-OBJ-003 | Component lifecycle events | A | PN-OBJ-001 | Construction/destruction ordering test | NOT_STARTED |
 | PN-OBJ-004 | Multithread-safe system scheduling from declared component access | A | PN-OBJ-002, PN-PLT-013 | Conflicting writers serialized; TSan clean under parallel systems | NOT_STARTED |
 | PN-OBJ-005 | Hierarchical transforms with attachment | A | PN-OBJ-001 | Deep hierarchy update correctness; reparenting preserves world transform | NOT_STARTED |
