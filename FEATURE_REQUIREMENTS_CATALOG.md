@@ -86,7 +86,7 @@ Tiers are cumulative (§6).
 
 | ID | Requirement | Tier | Depends on | Acceptance / test method | State |
 |---|---|---|---|---|---|
-| PN-OBJ-001 | Data-oriented entity/component storage with stable handles | A | PN-PLT-011 | Add/remove/query under randomized churn; handles never silently alias | NOT_STARTED |
+| PN-OBJ-001 | Data-oriented entity/component storage with stable handles | A | PN-PLT-011 | Add/remove/query under randomized churn; handles never silently alias | VERIFIED |
 | PN-OBJ-002 | Archetype or equivalent query acceleration | A | PN-OBJ-001 | Query cost independent of total entity count for a fixed match set | NOT_STARTED |
 | PN-OBJ-003 | Component lifecycle events | A | PN-OBJ-001 | Construction/destruction ordering test | NOT_STARTED |
 | PN-OBJ-004 | Multithread-safe system scheduling from declared component access | A | PN-OBJ-002, PN-PLT-013 | Conflicting writers serialized; TSan clean under parallel systems | NOT_STARTED |

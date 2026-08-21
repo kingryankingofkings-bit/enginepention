@@ -61,6 +61,7 @@ add_subdirectory(engine/math)
 add_subdirectory(engine/core)
 add_subdirectory(engine/platform)
 add_subdirectory(engine/jobs)
+add_subdirectory(engine/scene)
 
 # Rust crates sit above the C++ modules and link against them (ADR-0009).
 pn_configure_rust()

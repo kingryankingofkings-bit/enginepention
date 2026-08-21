@@ -229,3 +229,31 @@ the statements five tests depended on, so those tests checked nothing in Release
 and failed. Both gates are now forced on for the bulk of the test file and each
 has a test of its own where it is turned off deliberately and the *absence* of
 an effect is what is asserted.
+
+================================================================================
+Entity/component world, verified against its defects, 2026-08-21
+================================================================================
+
+Three properties removed in turn.
+
+=== The generation not bumped on destroy ===
+The whole reason a handle is generational: without it a recycled slot hands an
+old handle someone else's components. Nothing crashes; the wrong data is simply
+returned.
+  FAILED: 17 tests, 239593 checks, 2 failures
+
+=== Destroy leaving components behind ===
+  FAILED: 17 tests, 682 checks, 5 failures
+
+=== alive() ignoring the generation ===
+  FAILED: 17 tests, 203984 checks, 2 failures
+
+=== With all three restored ===
+  PASSED: 17 tests, 283342 checks, 0 failures
+
+Separately, GCC at -O3 rejected the query loop with "potential null pointer
+dereference", and it was right. The loop tested each component's presence and
+then looked it up again, so the check and the use were two different pointers -
+and the storage lookup itself was repeated per entity. Resolving the storages
+into locals before the loop and reusing one lookup per component fixes the
+diagnostic and removes the duplicated search. Clang accepted the original.
