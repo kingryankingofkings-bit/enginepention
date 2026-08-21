@@ -57,7 +57,7 @@ Tiers are cumulative (§6).
 | PN-PLT-001 | Application lifecycle and windowing, display modes, high-DPI | A | — | Windowed/fullscreen/borderless transitions, DPI change at runtime, no leak on shutdown | NOT_STARTED |
 | PN-PLT-002 | Raw keyboard, mouse, controller input; mapping, rebinding, haptics, hot-plug | A | PN-PLT-001 | Synthetic input injection tests; device add/remove during play | NOT_STARTED |
 | PN-PLT-003 | Monotonic time, fixed and variable tick, frame pacing, pause/step, time scaling | A | — | Fixed-step accumulator determinism test across variable frame times | IMPLEMENTED_UNVERIFIED |
-| PN-PLT-004 | Deterministic seeded RNG with explicit streams | A | — | Same seed reproduces identical sequence across platforms and compilers | NOT_STARTED |
+| PN-PLT-004 | Deterministic seeded RNG with explicit streams | A | — | Same seed reproduces identical sequence across platforms and compilers | IMPLEMENTED_UNVERIFIED |
 | PN-PLT-005 | Virtual memory reservation/commit abstraction | A | — | Reserve-then-commit growth test; commit failure handled without crash | IMPLEMENTED_UNVERIFIED |
 | PN-PLT-006 | Tagged allocators, arenas, pools, alignment guarantees | A | PN-PLT-005 | Alignment assertions; arena reset; over-alignment types | VERIFIED |
 | PN-PLT-007 | Memory tracking, leak detection, guard pages in diagnostic builds | A | PN-PLT-006 | Deliberate leak detected and attributed to allocation site | IMPLEMENTED_UNVERIFIED |

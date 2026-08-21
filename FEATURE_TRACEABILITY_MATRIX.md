@@ -7,8 +7,8 @@ tests, and the evidence supporting its current state.
 acceptance evidence both exist.** An interface, a stub, a passing compile, or a
 design document is not evidence.
 
-Current totals: **5 `VERIFIED`**, 16 `IMPLEMENTED_UNVERIFIED`, 18 `BLOCKED`,
-175 `NOT_STARTED`, of 214. Nothing is `DEFERRED_BY_SCOPE`.
+Current totals: **5 `VERIFIED`**, 17 `IMPLEMENTED_UNVERIFIED`, 18 `BLOCKED`,
+174 `NOT_STARTED`, of 214. Nothing is `DEFERRED_BY_SCOPE`.
 
 No requirement changed state in the Vulkan binding increment. The bindings are
 infrastructure under PN-RND-001, which stays `BLOCKED`: nothing here has
@@ -22,8 +22,13 @@ requirement rather than rounded up.
 
 ## Test totals, as counted from the built binaries
 
-162 registered C++ tests across 14 binaries, executing 12,483 assertions, plus
-127 Rust tests across 10 suites. All pass. Counted by running each binary rather
+183 registered C++ tests across 15 binaries, executing 897,210 assertions, plus
+127 Rust tests across 10 suites. All pass.
+
+The assertion count jumps because the generator's statistical tests assert
+per draw: 884,727 of those checks are one test binary establishing uniformity,
+per-bit balance, and range bounds over hundreds of thousands of samples. A
+statistical property asserted once is not asserted. Counted by running each binary rather
 than by reading the source, because a test that fails to register is invisible
 to a source count.
 
@@ -53,13 +58,14 @@ was written on.
 | `pn_test_core_expected` | 17 | 51 |
 | `pn_test_core_handle` | 10 | 105 |
 | `pn_test_core_memory` | 30 | 365 |
+| `pn_test_core_random` | 21 | 884,727 |
 | `pn_test_platform_virtual_memory` | 12 | 56 |
 | `pn_test_platform_clock` | 13 | 2,036 |
 | `pn_test_platform_thread` | 4 | 4 |
 | `pn_test_jobs_deque` | 10 | 8,154 |
 | `pn_test_jobs_job_system` | 17 | 1,548 |
 | `pn_test_jobs_c_api` | 7 | 23 |
-| **Total** | **162** | **12,483** |
+| **Total** | **183** | **897,210** |
 
 The Rust workspace reports pass/fail per test rather than per assertion, so its
 tests are counted separately rather than folded into a total that would mean two
@@ -134,6 +140,17 @@ warnings.
 | What is demonstrated | Both halves of the acceptance criterion. Hazards detected by test: reading a transient nothing wrote, using a buffer as a texture, a barrier-derivation rejection surfacing rather than being swallowed, and a write discarded by a later write. Plus culling iterated to a fixed point through a three-pass chain, pinned passes surviving with no consumer, lifetime spans in execution order with an aliasing candidate set, and a DOT visualization asserted byte for byte |
 | Why not `VERIFIED` | The requirement says **data-driven**, and this graph is built through a Rust API rather than from data. Pass declarations coming from a config or asset does not exist. Separately, nothing has recorded a compiled graph on hardware |
 | Defects found | Two, both mine, both found by tests whose premise turned out to be wrong. `disjoint_from` offered a persistent resource as an aliasing candidate because it filtered on lifetime span alone - the swapchain image is not the graph's memory to reuse. And the ordering semantics were never stated: I had assumed the graph would reorder a consumer declared before its producer, which would mean moving a declaration silently changed which frame's contents a pass sampled. Declaration order versions resources, so that case is a hazard, not a reordering opportunity, and a consequence is that dependency edges always run forward and the cycle check is an invariant guard rather than a feature. Both facts are now written down and asserted |
+
+### PN-PLT-004 - Deterministic seeded RNG
+
+| Field | Value |
+|---|---|
+| State | `IMPLEMENTED_UNVERIFIED` |
+| Implementation | `engine/core/include/pn/core/random.hpp` |
+| Tests | `engine/core/tests/random_test.cpp` (21 tests, 884,727 checks) |
+| What is demonstrated | Determinism across **compilers**: a recorded eight-value sequence is asserted literally, so a compiler that disagrees fails rather than passing quietly. Confirmed identical under g++ and clang++ at `-O0` and `-O2`, and across all ten CI configurations. Streams of one seed are independent and are not shifted copies of each other at any of sixteen offsets. Seeking ten million draws ahead agrees with iterating. Avalanche measured over 32,768 single-bit perturbations: mean 31-33 output bits flipped, no perturbation below 12 or above 52. The mixer is injective over a million consecutive inputs. Every output bit is set 49-51% of the time over 200,000 draws. `uniform` uses rejection sampling and shows no low-end bias over 1.2 million draws where `%` would |
+| Why not `VERIFIED` | The criterion says "across platforms **and** compilers". The compiler half is evidenced; the platform half has one platform. Linux x86-64 is all this environment has (`BLOCK-001`), and an argument that the code contains no implementation-defined behaviour is an argument, not a measurement. The recorded sequence is the artifact that closes this: the same test on a Windows or ARM host either matches it or does not |
+| Not claimed | Cryptographic strength, or a pass through any published statistical battery. None has been run here, and repeating a quality claim from another generator's literature would be describing evidence this project does not have. The header says so at the point of use |
 
 ## Documented conventions with enforcing tests
 
