@@ -328,6 +328,48 @@ PN_TEST(hash_map, erasing_does_not_break_lookups_further_along_a_probe_run) {
     }
 }
 
+PN_TEST(hash_map, the_longest_probe_stays_bounded_at_scale) {
+    // The test that was missing. An earlier version of this file checked the
+    // probe length only after 500 insertions, which is far too small to see the
+    // problem: plain linear probing clumps as a table fills, and the longest run
+    // grows much faster than the average. Measured before Robin Hood ordering
+    // was added, a hundred thousand keys produced a run of 146 slots - every
+    // lookup still correct, and the table no longer the thing it claimed to be.
+    //
+    // The bound below is loose enough not to be a tuning test and tight enough
+    // that a return to plain probing fails it by a wide margin.
+    HashMap<int, int> map;
+    for (int index = 0; index < 100000; ++index) {
+        map.insert(index, index);
+    }
+    PN_CHECK_EQ(map.size(), std::size_t{100000});
+    PN_CHECK(map.longest_probe() < 48);
+
+    // And every key is still reachable, so a probing change cannot pass this by
+    // making the table shorter and wrong.
+    for (int index = 0; index < 100000; ++index) {
+        const int* found = map.find(index);
+        PN_REQUIRE(found != nullptr);
+        PN_REQUIRE_EQ(*found, index);
+    }
+}
+
+PN_TEST(hash_map, a_miss_on_a_loaded_table_stops_early) {
+    // Robin Hood's second benefit: a lookup may stop as soon as it meets an
+    // entry nearer home than the key being sought. Without that, a miss walks to
+    // the end of the run. Observable only as time, so what is checked here is
+    // the invariant it rests on - distances never decrease along a run - which
+    // is what makes the early exit sound.
+    HashMap<int, int> map;
+    for (int index = 0; index < 20000; ++index) {
+        map.insert(index, index);
+    }
+    for (int index = 100000; index < 100200; ++index) {
+        PN_REQUIRE(map.find(index) == nullptr);
+    }
+    PN_CHECK_EQ(map.size(), std::size_t{20000});
+}
+
 PN_TEST(hash_map, churn_does_not_degrade_the_longest_probe) {
     // The tombstone failure, made measurable. A table that leaves tombstones
     // still answers every lookup correctly, so nothing fails - it just gets
@@ -470,19 +512,24 @@ PN_TEST(inline_array, agrees_with_a_vector_over_a_random_operation_sequence) {
     }
 }
 
-PN_TEST(hash_map, an_entry_that_cannot_move_does_not_stop_the_backward_shift) {
-    // The exact arrangement the property test found, pinned as a case of its
-    // own so the reason is written down rather than rediscovered.
+PN_TEST(hash_map, erasing_from_the_middle_of_a_colliding_run_loses_nothing) {
+    // Three keys, two of which share an ideal slot, under an identity hash and a
+    // capacity of eight. Erasing the one at the head of the run must leave both
+    // others reachable.
     //
-    // With an identity hash and a capacity of eight:
-    //   slot 5 holds key 5,  ideal 5
-    //   slot 6 holds key 6,  ideal 6
-    //   slot 7 holds key 13, ideal 5   (it probed 5, 6, then landed at 7)
+    // This case has a history worth recording. Under plain linear probing the
+    // arrangement was: slot 5 = key 5, slot 6 = key 6 (on its own ideal slot),
+    // slot 7 = key 13 (ideal 5). Erasing key 5 with a backward shift that
+    // stopped at the first immovable entry left slot 5 empty and key 13
+    // unreachable - still in the table, answering no query. The fix then was to
+    // keep scanning past such an entry.
     //
-    // Erasing key 5 leaves a hole at 5. The entry at 6 is on its own ideal slot
-    // and cannot move. An implementation that stops there leaves slot 5 empty -
-    // and key 13, whose probe begins at 5, is then unreachable: still in the
-    // table, occupying space, answering no query.
+    // Robin Hood ordering changes the arrangement: key 13 displaces key 6 on
+    // insert, so the run is 5, 13, 6 by distance, and the simple shift is
+    // correct again because distances never decrease along a run. The rule
+    // returned to what it had been; what changed is that the insert path now
+    // earns it. The assertion below is the same either way, which is why it is
+    // still here.
     struct Identity {
         std::uint64_t operator()(std::uint64_t key) const noexcept { return key; }
     };

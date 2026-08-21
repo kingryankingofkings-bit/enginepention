@@ -115,3 +115,34 @@ report 128 after set_all().
 
 Note the check counts again: two of the broken runs abort early, so a lower
 count is the failing run. The count alone is not a result.
+
+================================================================================
+Robin Hood invariant, verified to be load-bearing, 2026-08-21
+================================================================================
+
+Backward-shift deletion under Robin Hood ordering may stop at the first entry
+sitting on its ideal slot. Under plain linear probing that rule is wrong. The
+insert-side displacement is therefore load-bearing for the erase-side rule, and
+the two must be checked together rather than separately.
+
+Displacement disabled, simple erase kept - the exact combination that was the
+bug one commit earlier:
+
+  FAILED: 22 tests, 108994 checks, 6 failures
+
+With displacement restored:
+
+  PASSED: 22 tests, 704719 checks, 0 failures
+
+Measured probe lengths before and after the change, from a standalone program
+over freshly inserted keys:
+
+  HashMap    1,000 entries    15 -> 5
+  HashMap   10,000 entries    30 -> 8
+  HashMap  100,000 entries   146 -> 25
+  NameTable  1,000 names      11 -> 5
+  NameTable 10,000 names      47 -> 10
+  NameTable 100,000 names    133 -> 18
+
+The 100,000-entry cases are the reason this was found at all. The probe test in
+the previous commit stopped at 500 entries, where the difference is invisible.

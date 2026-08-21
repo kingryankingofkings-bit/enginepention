@@ -1,5 +1,5 @@
 # Pention Engine - core module
-# Requirement: PN-PLT-004, PN-PLT-006, PN-PLT-009, PN-PLT-007, PN-PLT-011, PN-PLT-027
+# Requirement: PN-PLT-004, PN-PLT-006, PN-PLT-009, PN-PLT-010, PN-PLT-007, PN-PLT-011, PN-PLT-027
 # Decision:    ADR-0002, ADR-0004, ADR-0007
 
 pn_add_module(core
@@ -14,3 +14,4 @@ pn_add_test(core_memory   SOURCES tests/memory_test.cpp   DEPS pn::core)
 pn_add_test(core_random   SOURCES tests/random_test.cpp   DEPS pn::core)
 pn_add_test(core_containers SOURCES tests/containers_test.cpp DEPS pn::core)
 pn_add_test(core_collections SOURCES tests/collections_test.cpp DEPS pn::core)
+pn_add_test(core_name     SOURCES tests/name_test.cpp     DEPS pn::core)

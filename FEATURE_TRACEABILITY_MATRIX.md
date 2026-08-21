@@ -7,8 +7,8 @@ tests, and the evidence supporting its current state.
 acceptance evidence both exist.** An interface, a stub, a passing compile, or a
 design document is not evidence.
 
-Current totals: **6 `VERIFIED`**, 17 `IMPLEMENTED_UNVERIFIED`, 18 `BLOCKED`,
-173 `NOT_STARTED`, of 214. Nothing is `DEFERRED_BY_SCOPE`.
+Current totals: **7 `VERIFIED`**, 17 `IMPLEMENTED_UNVERIFIED`, 18 `BLOCKED`,
+172 `NOT_STARTED`, of 214. Nothing is `DEFERRED_BY_SCOPE`.
 
 No requirement changed state in the Vulkan binding increment. The bindings are
 infrastructure under PN-RND-001, which stays `BLOCKED`: nothing here has
@@ -22,7 +22,7 @@ requirement rather than rounded up.
 
 ## Test totals, as counted from the built binaries
 
-224 registered C++ tests across 17 binaries, executing 2,468,073 assertions,
+244 registered C++ tests across 18 binaries, executing 2,712,681 assertions,
 plus 145 Rust tests across 11 suites. All pass.
 
 The assertion count is dominated by three binaries that assert per sample
@@ -61,15 +61,16 @@ was written on.
 | `pn_test_core_handle` | 10 | 105 |
 | `pn_test_core_memory` | 30 | 365 |
 | `pn_test_core_random` | 21 | 884,727 |
-| `pn_test_core_containers` | 20 | 504,516 |
+| `pn_test_core_containers` | 22 | 704,719 |
 | `pn_test_core_collections` | 21 | 1,066,347 |
+| `pn_test_core_name` | 18 | 44,405 |
 | `pn_test_platform_virtual_memory` | 12 | 56 |
 | `pn_test_platform_clock` | 13 | 2,036 |
 | `pn_test_platform_thread` | 4 | 4 |
 | `pn_test_jobs_deque` | 10 | 8,154 |
 | `pn_test_jobs_job_system` | 17 | 1,548 |
 | `pn_test_jobs_c_api` | 7 | 23 |
-| **Total** | **224** | **2,468,073** |
+| **Total** | **244** | **2,712,681** |
 
 The Rust workspace reports pass/fail per test rather than per assertion, so its
 tests are counted separately rather than folded into a total that would mean two
@@ -103,7 +104,8 @@ warnings.
 | PN-PLT-011 | Generational handles that detect stale access | `engine/core/include/pn/core/handle.hpp` | `engine/core/tests/handle_test.cpp` (10 tests) | A recycled slot is proven to invalidate the prior handle rather than alias it; double-free is reported rather than ignored; never-issued, out-of-range, freed, and stale are distinguished by error category |
 | PN-PLT-006 | Tagged allocators, arenas, pools, alignment | `engine/core/include/pn/core/memory.hpp` | `engine/core/tests/memory_test.cpp` (30 tests) | Alignment honoured from a deliberately misaligned cursor across five alignments; padding cannot overrun the end; marker rewind exact; pool refuses an interior or foreign pointer rather than corrupting its free list; full allocate/free/reallocate cycle returns every block |
 | PN-PLT-008 | Out-of-memory handling with defined recovery | `engine/core/include/pn/core/memory.hpp` | `engine/core/tests/memory_test.cpp` | Exhaustion returns `out_of_memory` rather than aborting, and the allocator remains usable and uncorrupted afterwards - asserted, not assumed |
-| PN-PLT-009 | Cache-aware containers authored in-project | `engine/core/include/pn/core/{assert,hash,inline_array,hash_map,sparse_set,ring_buffer,bit_set}.hpp` | `containers_test.cpp` (20 tests), `collections_test.cpp` (21 tests) | Five containers, each chosen for a cache property the standard library does not offer: inline storage, open addressing with backward-shift deletion, contiguous iteration by integer key, a masked wrap, and one bit per object. Unit tests plus property tests driving 100,000-200,000 pseudorandom operations against `std::vector`, `std::map` and `std::deque` as oracles, with a full sweep afterwards so an element that became unreachable without changing the count is still caught. `PN_ASSERT` guards every index whenever `NDEBUG` is not defined. Four defects were introduced deliberately and each was caught - `docs/evidence/enforcement-checks.txt` |
+| PN-PLT-009 | Cache-aware containers authored in-project | `engine/core/include/pn/core/{assert,hash,inline_array,hash_map,sparse_set,ring_buffer,bit_set}.hpp` | `containers_test.cpp` (22 tests), `collections_test.cpp` (21 tests) | Five containers, each chosen for a cache property the standard library does not offer: inline storage, open addressing with backward-shift deletion, contiguous iteration by integer key, a masked wrap, and one bit per object. Unit tests plus property tests driving 100,000-200,000 pseudorandom operations against `std::vector`, `std::map` and `std::deque` as oracles, with a full sweep afterwards so an element that became unreachable without changing the count is still caught. `PN_ASSERT` guards every index whenever `NDEBUG` is not defined. Five defects were introduced deliberately and each was caught - `docs/evidence/enforcement-checks.txt`. The map uses Robin Hood ordering after measurement showed plain linear probing reaching a 146-slot run at a hundred thousand keys; the probe test now runs at that scale rather than at 500 |
+| PN-PLT-010 | String, interned name, and handle systems | `engine/core/include/pn/core/{name,string,handle}.hpp` | `name_test.cpp` (18 tests), `handle_test.cpp` (10 tests) | All three parts of the criterion. **Interning collisions:** a deliberately colliding hasher is supplied to the table, and 200 distinct strings that all hash to zero stay 200 distinct names, resolvable by text in both directions; equal-length collisions exercise the byte comparison behind the length check. **Rehash:** 20,000 names force many doublings with every name and its text preserved and no duplicates created, and text views captured before the growth remain valid and at the same address afterwards - the property the chunked storage exists for. **Handle staleness:** covered by PN-PLT-011, already verified |
 
 ## Partially verified
 

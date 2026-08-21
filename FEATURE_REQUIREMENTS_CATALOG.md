@@ -63,7 +63,7 @@ Tiers are cumulative (§6).
 | PN-PLT-007 | Memory tracking, leak detection, guard pages in diagnostic builds | A | PN-PLT-006 | Deliberate leak detected and attributed to allocation site | IMPLEMENTED_UNVERIFIED |
 | PN-PLT-008 | Out-of-memory handling with defined recovery boundaries | A | PN-PLT-006 | Injected allocation failure; engine reports rather than faults | VERIFIED |
 | PN-PLT-009 | Cache-aware containers authored in-project | A | PN-PLT-006 | Unit + property tests; bounds-checked in debug | VERIFIED |
-| PN-PLT-010 | String, interned name, and handle systems | A | PN-PLT-009 | Interning collision and rehash tests; handle staleness detection | NOT_STARTED |
+| PN-PLT-010 | String, interned name, and handle systems | A | PN-PLT-009 | Interning collision and rehash tests; handle staleness detection | VERIFIED |
 | PN-PLT-011 | Generational handles that detect stale access | A | PN-PLT-010 | Freed-then-reused slot yields a detectable stale handle, not an alias | VERIFIED |
 | PN-PLT-012 | Thread abstraction, affinity, naming | A | — | Thread lifecycle test; names visible in diagnostics | IMPLEMENTED_UNVERIFIED |
 | PN-PLT-013 | Work-stealing job graph with priorities and dependencies | A | PN-PLT-012 | Scales with core count; randomized scheduling stress finds no deadlock | IMPLEMENTED_UNVERIFIED |
