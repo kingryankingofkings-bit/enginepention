@@ -1,0 +1,77 @@
+# Pention Engine - continuous integration
+# Requirement: PN-OPS-001, PN-OPS-003, PN-OPS-007, PN-PLT-018
+# Decision:    ADR-0001, ADR-0004
+#
+# Both supported compilers build every commit from the first commit rather than
+# being added later. That has already paid for itself once: the divergence in
+# std::expected availability between GCC and Clang (CONF-003) was found by
+# measurement, not by assumption.
+
+name: CI
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+
+jobs:
+  checks:
+    name: Clean-room and layering checks
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Authorship headers
+        run: python3 build_scripts/check_authorship.py
+      - name: Module layering and graphics-API confinement
+        run: python3 build_scripts/check_layering.py
+      - name: Source is ASCII-only
+        run: |
+          if LC_ALL=C grep -rPn '[^\x00-\x7F]' engine/ cmake/ build_scripts/ CMakeLists.txt 2>/dev/null; then
+            echo "Non-ASCII characters found in source. Keep source ASCII-only."
+            exit 1
+          fi
+          echo "Source is ASCII-clean"
+
+  build:
+    name: ${{ matrix.compiler }} ${{ matrix.build_type }} ${{ matrix.label }}
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { compiler: g++,     build_type: Debug,   label: "",                extra: "" }
+          - { compiler: g++,     build_type: Release, label: "",                extra: "" }
+          - { compiler: clang++, build_type: Debug,   label: "",                extra: "" }
+          - { compiler: clang++, build_type: Release, label: "",                extra: "" }
+          - { compiler: g++,     build_type: Debug,   label: "no-exceptions",   extra: "-DPN_NO_EXCEPTIONS=ON" }
+          - { compiler: clang++, build_type: Debug,   label: "no-exceptions",   extra: "-DPN_NO_EXCEPTIONS=ON" }
+          - { compiler: g++,     build_type: Debug,   label: "asan-ubsan",      extra: "-DPN_SANITIZE_ADDRESS=ON" }
+          - { compiler: clang++, build_type: Debug,   label: "asan-ubsan",      extra: "-DPN_SANITIZE_ADDRESS=ON" }
+          - { compiler: g++,     build_type: Debug,   label: "tsan",            extra: "-DPN_SANITIZE_THREAD=ON" }
+          - { compiler: clang++, build_type: Debug,   label: "tsan",            extra: "-DPN_SANITIZE_THREAD=ON" }
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install toolchain
+        run: |
+          sudo apt-get update -qq
+          # libclang-rt-*-dev provides Clang's sanitizer runtime archives.
+          # Without it, the Clang sanitizer configurations fail to LINK - and an
+          # image that lacks it would otherwise skip that coverage quietly.
+          sudo apt-get install -y --no-install-recommends \
+            ninja-build clang-18 libclang-rt-18-dev
+          sudo update-alternatives --install /usr/bin/clang++ clang++ /usr/bin/clang++-18 100 || true
+
+      - name: Configure
+        run: >
+          cmake -S . -B build -G Ninja
+          -DCMAKE_BUILD_TYPE=${{ matrix.build_type }}
+          -DCMAKE_CXX_COMPILER=${{ matrix.compiler }}
+          -DPN_WARNINGS_AS_ERRORS=ON
+          ${{ matrix.extra }}
+
+      - name: Build
+        run: cmake --build build
+
+      - name: Test
+        run: ctest --test-dir build --output-on-failure
