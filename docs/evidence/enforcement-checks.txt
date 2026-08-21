@@ -67,3 +67,24 @@ exit=0
 === 8. The check passes again once the violations are removed ===
 Module layering check passed
 exit=0
+
+================================================================================
+Container regression test, verified to fail on the defect it names, 2026-08-21
+================================================================================
+
+A regression test that has never been seen to fail is a regression test nobody
+has checked. The backward-shift deletion fix was temporarily reverted to the
+stopping behaviour it replaced, and both the named case and the property test
+failed:
+
+  FAIL agrees_with_std_map_over_a_long_random_operation_sequence (1 of 3903 checks failed, aborted)
+  FAIL an_entry_that_cannot_move_does_not_stop_the_backward_shift (1 of 3 checks failed, aborted)
+  FAILED: 20 tests, 119122 checks, 3 failures
+
+With the fix restored:
+
+  PASSED: 20 tests, 504514 checks, 0 failures
+
+Note the check count: the property test aborts early on the defect, so the run
+that "only" executed 119,122 checks is the broken one. A count alone is not a
+result.

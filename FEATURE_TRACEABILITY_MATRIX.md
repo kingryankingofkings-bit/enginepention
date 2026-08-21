@@ -7,8 +7,8 @@ tests, and the evidence supporting its current state.
 acceptance evidence both exist.** An interface, a stub, a passing compile, or a
 design document is not evidence.
 
-Current totals: **5 `VERIFIED`**, 17 `IMPLEMENTED_UNVERIFIED`, 18 `BLOCKED`,
-174 `NOT_STARTED`, of 214. Nothing is `DEFERRED_BY_SCOPE`.
+Current totals: **5 `VERIFIED`**, 18 `IMPLEMENTED_UNVERIFIED`, 18 `BLOCKED`,
+173 `NOT_STARTED`, of 214. Nothing is `DEFERRED_BY_SCOPE`.
 
 No requirement changed state in the Vulkan binding increment. The bindings are
 infrastructure under PN-RND-001, which stays `BLOCKED`: nothing here has
@@ -22,13 +22,14 @@ requirement rather than rounded up.
 
 ## Test totals, as counted from the built binaries
 
-183 registered C++ tests across 15 binaries, executing 897,210 assertions, plus
-145 Rust tests across 11 suites. All pass.
+203 registered C++ tests across 16 binaries, executing 1,401,726 assertions,
+plus 145 Rust tests across 11 suites. All pass.
 
-The assertion count jumps because the generator's statistical tests assert
-per draw: 884,727 of those checks are one test binary establishing uniformity,
-per-bit balance, and range bounds over hundreds of thousands of samples. A
-statistical property asserted once is not asserted. Counted by running each binary rather
+The assertion count is dominated by two binaries that assert per sample rather
+than per case: the generator's statistical tests (884,727) and the containers'
+property tests against `std::map` and `std::vector` as oracles (504,516). A
+statistical property asserted once is not asserted, and a container invariant
+checked on one hand-written sequence is checked on one hand-written sequence. Counted by running each binary rather
 than by reading the source, because a test that fails to register is invisible
 to a source count.
 
@@ -59,13 +60,14 @@ was written on.
 | `pn_test_core_handle` | 10 | 105 |
 | `pn_test_core_memory` | 30 | 365 |
 | `pn_test_core_random` | 21 | 884,727 |
+| `pn_test_core_containers` | 20 | 504,516 |
 | `pn_test_platform_virtual_memory` | 12 | 56 |
 | `pn_test_platform_clock` | 13 | 2,036 |
 | `pn_test_platform_thread` | 4 | 4 |
 | `pn_test_jobs_deque` | 10 | 8,154 |
 | `pn_test_jobs_job_system` | 17 | 1,548 |
 | `pn_test_jobs_c_api` | 7 | 23 |
-| **Total** | **183** | **897,210** |
+| **Total** | **203** | **1,401,726** |
 
 The Rust workspace reports pass/fail per test rather than per assertion, so its
 tests are counted separately rather than folded into a total that would mean two
@@ -168,6 +170,18 @@ sufficient for golden-image tests.
 | Defect found | Geometry lying exactly on the near plane was clipped away. The near test used a positive epsilon, so `z == w` - which *is* the near plane - fell outside it. This presents as surfaces vanishing the moment the camera reaches them, and it was invisible until a test drew a quad at exactly the near plane |
 | Not claimed | Any performance property. There is no tiling, no SIMD, no threading, and no measurement. It is a correctness oracle, and the header says so |
 
+
+### PN-PLT-009 - Cache-aware containers
+
+| Field | Value |
+|---|---|
+| State | `IMPLEMENTED_UNVERIFIED` |
+| Implementation | `engine/core/include/pn/core/{assert,hash,inline_array,hash_map}.hpp` |
+| Tests | `engine/core/tests/containers_test.cpp` (20 tests, 504,516 checks) |
+| Criterion status | All three clauses are met for both containers that exist. Unit tests: yes. Property tests: both containers are driven through 100,000 and 200,000 pseudorandom operations and compared against `std::vector` and `std::map` as oracles, with a full sweep at the end so an entry that became unreachable without changing the count is still caught. Bounds-checked in debug: `PN_ASSERT` is active whenever `NDEBUG` is not defined, and guards every index and every `at` |
+| Why not `VERIFIED` | The requirement says "containers", and does not enumerate them. Two exist. The set an engine actually leans on also needs a sparse set (the ECS workhorse, where iteration must be contiguous), a ring buffer, and a bit set. Claiming the requirement complete with two of five would be reading the acceptance criterion - which is about *how* containers are validated - as if it were the scope |
+| Defect found | Backward-shift deletion stopped at the first entry that could not move backwards. It must continue scanning. With a hole at slot 5, an entry at 6 whose ideal is 6, and an entry at 7 whose ideal is 5, stopping leaves slot 5 empty and key 7 unreachable - still in the table, occupying space, answering no query. Found by the property test; the hand-written collision test did not produce that arrangement. Both the property test and a named regression test were then verified to fail when the defect is reintroduced (`docs/evidence/enforcement-checks.txt`) |
+| Second defect | Four places in the test file checked one `find()` call's result and dereferenced a different call's. Only `g++ -O3` reports it, where inlining makes the second call visible as a potential null dereference. The warning was right and the tests were sloppy; binding the pointer once is what the reader assumed was happening anyway |
 
 ## Documented conventions with enforcing tests
 

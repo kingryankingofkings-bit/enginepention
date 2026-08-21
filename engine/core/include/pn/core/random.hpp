@@ -5,6 +5,8 @@
 #ifndef PN_CORE_RANDOM_HPP
 #define PN_CORE_RANDOM_HPP
 
+#include "pn/core/hash.hpp"
+
 #include <cstdint>
 
 namespace pn::core {
@@ -142,26 +144,13 @@ public:
     /// A test that can only observe the class cannot measure avalanche, and a
     /// mixer whose avalanche is never measured is a mixer nobody has checked.
     ///
-    /// The three multipliers are the fractional bits of the square roots of 2,
-    /// 3, and 5, forced odd. That derivation is stated so it can be recomputed
-    /// rather than taken on trust: an unexplained magic constant is exactly the
-    /// fingerprint that makes provenance unverifiable, and a multiplier must be
-    /// odd or the multiplication is not invertible and information is destroyed.
+    /// It lives in `hash.hpp` as `mix64` because a hash table needs exactly the
+    /// same property for a different reason: neighbouring keys must land in
+    /// unrelated buckets, and consecutive counters must produce unrelated
+    /// values. The avalanche measured by this file's tests is what both rely
+    /// on.
     static constexpr std::uint64_t mix(std::uint64_t a, std::uint64_t b) noexcept {
-        constexpr std::uint64_t kRootTwo = 0x6A09E667F3BCC909ULL;
-        constexpr std::uint64_t kRootThree = 0xBB67AE8584CAA73BULL;
-        constexpr std::uint64_t kRootFive = 0x3C6EF372FE94F82BULL;
-
-        std::uint64_t value = a ^ (b + kRootTwo);
-        value ^= value >> 29;
-        value *= kRootThree;
-        value ^= value >> 32;
-        value += b;
-        value *= kRootFive;
-        value ^= value >> 31;
-        value *= kRootTwo;
-        value ^= value >> 30;
-        return value;
+        return mix64(a, b);
     }
 
 private:
