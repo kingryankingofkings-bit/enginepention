@@ -69,7 +69,7 @@ Tiers are cumulative (§6).
 | PN-PLT-013 | Work-stealing job graph with priorities and dependencies | A | PN-PLT-012 | Scales with core count; randomized scheduling stress finds no deadlock | IMPLEMENTED_UNVERIFIED |
 | PN-PLT-014 | Synchronization primitives, cancellation, deadlock diagnostics | A | PN-PLT-013 | TSan clean; cancellation propagates without leaking jobs | IMPLEMENTED_UNVERIFIED |
 | PN-PLT-015 | Asynchronous I/O with cancellation and backpressure | A | PN-PLT-013 | Concurrent read stress; cancel mid-flight leaves no dangling buffer | NOT_STARTED |
-| PN-PLT-016 | Logging, structured events, assertions with categories and levels | A | — | Log capture in tests; assertion fires with source location | NOT_STARTED |
+| PN-PLT-016 | Logging, structured events, assertions with categories and levels | A | — | Log capture in tests; assertion fires with source location | VERIFIED |
 | PN-PLT-017 | Crash capture, minidump integration, error reporting, recovery boundary | A | PN-PLT-016 | Induced fault produces a usable dump on the target platform | BLOCKED (`BLOCK-001` for the Windows dump path) |
 | PN-PLT-018 | Module boundaries, stable internal APIs, versioning, capability discovery | A | — | CI dependency-direction check fails on a violating include | IMPLEMENTED_UNVERIFIED |
 | PN-PLT-019 | Configuration, console variables, command execution | A | PN-PLT-010 | CVar set/get/persist round-trip; command parse errors are actionable | VERIFIED |

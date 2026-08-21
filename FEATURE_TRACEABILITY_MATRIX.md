@@ -7,8 +7,8 @@ tests, and the evidence supporting its current state.
 acceptance evidence both exist.** An interface, a stub, a passing compile, or a
 design document is not evidence.
 
-Current totals: **9 `VERIFIED`**, 17 `IMPLEMENTED_UNVERIFIED`, 18 `BLOCKED`,
-170 `NOT_STARTED`, of 214. Nothing is `DEFERRED_BY_SCOPE`.
+Current totals: **10 `VERIFIED`**, 17 `IMPLEMENTED_UNVERIFIED`, 18 `BLOCKED`,
+169 `NOT_STARTED`, of 214. Nothing is `DEFERRED_BY_SCOPE`.
 
 No requirement changed state in the Vulkan binding increment. The bindings are
 infrastructure under PN-RND-001, which stays `BLOCKED`: nothing here has
@@ -22,7 +22,7 @@ requirement rather than rounded up.
 
 ## Test totals, as counted from the built binaries
 
-294 registered C++ tests across 20 binaries, executing 2,834,409 assertions,
+314 registered C++ tests across 21 binaries, executing 2,834,472 assertions,
 plus 145 Rust tests across 11 suites. All pass.
 
 The assertion count is dominated by three binaries that assert per sample
@@ -66,13 +66,14 @@ was written on.
 | `pn_test_core_name` | 18 | 44,405 |
 | `pn_test_core_serialize` | 23 | 120,089 |
 | `pn_test_core_console` | 27 | 1,639 |
+| `pn_test_core_log` | 20 | 63 |
 | `pn_test_platform_virtual_memory` | 12 | 56 |
 | `pn_test_platform_clock` | 13 | 2,036 |
 | `pn_test_platform_thread` | 4 | 4 |
 | `pn_test_jobs_deque` | 10 | 8,154 |
 | `pn_test_jobs_job_system` | 17 | 1,548 |
 | `pn_test_jobs_c_api` | 7 | 23 |
-| **Total** | **294** | **2,834,409** |
+| **Total** | **314** | **2,834,472** |
 
 The Rust workspace reports pass/fail per test rather than per assertion, so its
 tests are counted separately rather than folded into a total that would mean two
@@ -110,6 +111,7 @@ warnings.
 | PN-PLT-010 | String, interned name, and handle systems | `engine/core/include/pn/core/{name,string,handle}.hpp` | `name_test.cpp` (18 tests), `handle_test.cpp` (10 tests) | All three parts of the criterion. **Interning collisions:** a deliberately colliding hasher is supplied to the table, and 200 distinct strings that all hash to zero stay 200 distinct names, resolvable by text in both directions; equal-length collisions exercise the byte comparison behind the length check. **Rehash:** 20,000 names force many doublings with every name and its text preserved and no duplicates created, and text views captured before the growth remain valid and at the same address afterwards - the property the chunked storage exists for. **Handle staleness:** covered by PN-PLT-011, already verified |
 | PN-PLT-020 | Deterministic serialization with schema migration | `engine/core/include/pn/core/{serialize,checksum}.hpp` | `serialize_test.cpp` (23 tests) | Both clauses. **Golden data:** a committed 31-byte blob is asserted to decode, and separately to be reproduced byte for byte by the writer - checked in both directions, so a failure says which side moved. **Migration:** a version-1 payload is read by version-2 code, the field it never carried is filled from a stated default, and the result is written at the current version and read back unchanged. Encoding is canonical - shortest-form varints, with longer encodings of the same value rejected - and the same values re-encode identically over 20,000 pseudorandom rounds. CRC-32 matches the published check value for `123456789`. Three defects were introduced deliberately and each was caught - `docs/evidence/enforcement-checks.txt` |
 | PN-PLT-019 | Configuration, console variables, command execution | `engine/core/include/pn/core/console.hpp`, `engine/core/src/console.cpp` | `console_test.cpp` (27 tests) | Both clauses. **Round-trip:** four variables of four types are set, saved, loaded into a fresh console, compared value by value, and saved again to the identical file - so it is a round-trip rather than a one-way conversion. Only variables that differ from their default and are flagged to persist are written, because writing everything would freeze today's defaults into every user's config file. **Actionable errors:** each parse failure names what was wrong and the column it happened at, asserted exactly - an unterminated string reports the opening quote rather than the end of the line, a stray argument suggests quoting, and a bad boolean lists the spellings it would have taken. A bad line does not discard the rest of a config file, and an unknown variable is reported without rejecting the file, because a config outlives the variables in it |
+| PN-PLT-016 | Logging, structured events, assertions with categories and levels | `engine/core/include/pn/core/{log,assert}.hpp`, `engine/core/src/log.cpp` | `log_test.cpp` (20 tests) | Both clauses. **Log capture:** a capturing sink receives level, category, message, structured fields and source location, and copies every string out of the record because the views in one point at the caller's stack. Per-category thresholds, records suppressed below a threshold without evaluating their arguments, and 800 records from four threads all arriving with the dispatch TSan-clean. **Assertion fires with source location:** the handler is now replaceable, which is what made this testable at all - an assertion that only ever aborts cannot be observed by the process it aborts - and is what a crash reporter needs anyway. The expression, message, file and line are asserted exactly. Both compile-time gates have a test of their own where they are turned off and the *absence* of an effect is checked |
 
 ## Partially verified
 

@@ -206,3 +206,26 @@ exact expected file. Re-checked with the sort removed:
 And restored:
 
   PASSED: 27 tests, 1639 checks, 0 failures
+
+================================================================================
+Logging and assertion tests, verified against their defects, 2026-08-21
+================================================================================
+
+=== Captured field values not copied out of the record ===
+Every view in a log record points at the caller's memory and lives only for the
+duration of the call.
+  FAILED: 18 tests, 56 checks, 2 failures
+
+=== The level threshold ignored ===
+  FAILED: 18 tests, 51 checks, 4 failures
+
+=== Sink dispatch not synchronized ===
+  WARNING: ThreadSanitizer: data race
+  SUMMARY: ThreadSanitizer: data race in pn::core::Logger::emit
+
+A separate finding, from running Release before pushing rather than after: both
+compile-time gates - PN_LOG_MIN_LEVEL and PN_ENABLE_ASSERTS - silently removed
+the statements five tests depended on, so those tests checked nothing in Release
+and failed. Both gates are now forced on for the bulk of the test file and each
+has a test of its own where it is turned off deliberately and the *absence* of
+an effect is what is asserted.
