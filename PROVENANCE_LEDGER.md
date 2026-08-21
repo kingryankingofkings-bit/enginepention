@@ -43,19 +43,21 @@ read**, not when it is planned. Empty sections are honest, not oversights.
 
 | ID | Title | Publisher | URL | Retrieved | Information used | Implementation code copied? |
 |---|---|---|---|---|---|---|
-| _(none yet — populated during Phase 1)_ | | | | | | |
+| S-001 | Enhanced Barriers (D3D12) | Microsoft, `microsoft/DirectX-Specs` | https://raw.githubusercontent.com/microsoft/DirectX-Specs/master/d3d/D3D12EnhancedBarriers.md | 2026-08-21 | Barrier model: independent sync/access/layout axes; texture, buffer and global barrier kinds; queue-type layout compatibility; absence of state promotion/decay | **No** — prose and API declarations only; `DirectX-Graphics-Samples` deliberately not opened |
+| S-002 | Vulkan Core Revisions appendix | Khronos Group, `KhronosGroup/Vulkan-Docs` | https://raw.githubusercontent.com/KhronosGroup/Vulkan-Docs/main/appendices/versions.adoc | 2026-08-21 | Extension-to-core promotion lists per Vulkan version | **No** — specification prose only |
+| S-003 | glTF 2.0 Specification (index) | Khronos Group, `KhronosGroup/glTF` | https://raw.githubusercontent.com/KhronosGroup/glTF/main/specification/2.0/README.md | 2026-08-21 | Index only; confirmed reachability before committing the asset pipeline to glTF | **No** |
 
 ### Engine capability documentation
 
 | ID | Title | Publisher | URL | Retrieved | Information used | Implementation code copied? |
 |---|---|---|---|---|---|---|
-| _(none yet — populated during Phase 1)_ | | | | | | |
+| S-006 | Engine capability landscape | Various (search snippets only) | see [ENGINE_COMPARISON_MATRIX.md](ENGINE_COMPARISON_MATRIX.md) | 2026-08-21 | Provisional capability rows for UE, Unity, Godot, O3DE, CryEngine. **All `NOT_VERIFIED_CURRENT`** — every vendor documentation domain is egress-blocked (`BLOCK-006`) | **No** — no source was reachable to copy from |
 
 ### Technical papers and presentations
 
 | ID | Title | Publisher | URL | Retrieved | Information used | Implementation code copied? |
 |---|---|---|---|---|---|---|
-| _(none yet — populated during Phase 1)_ | | | | | | |
+| S-005 | Shader Model 6.9 / Agility SDK 1.619 / DXR 1.2 | Secondary technical press | see [RESEARCH_CATALOG.md](RESEARCH_CATALOG.md#s-005--direct3d-12-agility-sdk--shader-model-69) | 2026-08-21 | SM 6.9 long-vector support; 16-bit float intrinsic coverage. Used only to justify **runtime capability detection**, never as a load-bearing assumption | **No** |
 
 ## Model-generated code declaration
 
@@ -91,3 +93,4 @@ Work marked `PROVENANCE_BLOCKED` and its disposition.
 | Date | Audit type | Scope | Result | Evidence |
 |---|---|---|---|---|
 | 2026-08-21 | Initial provenance baseline | Empty repository, zero commits | Clean origin — no pre-existing code of any provenance | `docs/ENVIRONMENT_BASELINE.md` §5 |
+| 2026-08-21 | Phase 1 source review | 6 sources consulted (S-001..S-006) | No implementation code copied from any source. Three retrieved in full at tier 1–2; three are tier-4 and labelled `NOT_VERIFIED_CURRENT` | [RESEARCH_CATALOG.md](RESEARCH_CATALOG.md) |

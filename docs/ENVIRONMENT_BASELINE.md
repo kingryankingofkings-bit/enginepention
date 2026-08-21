@@ -69,6 +69,7 @@ external action required. All independent work continues around them.
 | `BLOCK-003` | HLSL→DXIL shader compilation | `dxc` from the DirectX Shader Compiler release, on a host where it can run |
 | `BLOCK-004` | Vulkan backend compilation and validation-layer runs | Vulkan SDK (headers, loader, validation layers) |
 | `BLOCK-005` | Signed release artifacts | A code-signing certificate — `USER_ACTION_REQUIRED`, never simulated |
+| `BLOCK-006` | Live primary-source research into competing engines (§5.1) | An egress policy permitting vendor documentation domains, or the documentation supplied directly. Discovered in Phase 1 — see [RESEARCH_GAPS.md](../RESEARCH_GAPS.md) GAP-001 |
 
 **What is *not* blocked.** The platform-agnostic majority of the engine —
 memory, containers, math, handles, reflection, serialization, job system, ECS,
